@@ -18,7 +18,39 @@ class RobotCanvas(tk.Canvas):
         self.draw_robot(draw)
         self.photo_image = ImageTk.PhotoImage(img)
         self.create_image(0, 0, anchor=tk.NW, image=self.photo_image)
+        self.draw_circuit()
 
+    def draw_circuit(self):
+        # Define control points for the Bézier curves to create a smooth circuit
+        points = [
+            (150, 150),  # Start
+            (100, 50),   # Control point for first curve
+            (200, 50),   # End of first curve
+            (300, 100),  # Control point for second curve
+            (300, 200),  # End of second curve
+            (200, 250),  # Control point for third curve
+            (100, 250),  # End of third curve
+            (50, 200),   # Control point for fourth curve
+            (50, 100),   # End of fourth curve
+        ]
+
+        # Draw the curves to form the circuit
+        for i in range(0, len(points), 3):
+            if i + 3 <= len(points):
+                self.create_line(
+                    points[i][0], points[i][1],
+                    points[i + 1][0], points[i + 1][1],
+                    points[i + 2][0], points[i + 2][1],
+                    smooth=True, fill="black", width=3
+                )
+
+        # Connect the end of the last curve to the start point to close the loop
+        self.create_line(
+            points[-1][0], points[-1][1],
+            points[0][0], points[0][1],
+            smooth=True, fill="black", width=3
+        )
+    
     def draw_guideline(self, draw):
         for curve in self.guideline:
             draw.line(curve[:2], fill="black")
