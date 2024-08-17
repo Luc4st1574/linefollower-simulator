@@ -39,11 +39,13 @@ class Robot:
         self.x = self.default_x
         self.y = self.default_y
         self.angle = self.default_angle
+        print("Robot position reset", self.x, self.y, self.angle)
         
     def set_wheel_gauge(self, gauge):
         self.wheel_gauge = gauge
         self.robot_height = gauge
         self.bounds = box(-self.robot_width / 2, -self.robot_height / 2, self.robot_width / 2, self.robot_height / 2)
+        print("Wheel gauge set to", gauge)
     
     def move(self):
         self.motor_ctrl.update()
@@ -72,14 +74,25 @@ class Sensor:
     def __init__(self, path):
         self.sensor_line = LineString()
         self.path = path
-        self.set_geometry(30, 20)
+        self.set_geometry(30, 20)  # Default width and location
         self.last_seen = 1
         
     def set_geometry(self, width, location):
-        self.location = location
+        #Sets the sensor geometry with the given width and location.
         self.width = width
-        self.hypotenuse = math.sqrt((width / 2)**(width / 2) + location * location)
+        self.location = location
+        self.hypotenuse = math.sqrt((width / 2)**2 + location**2)
         self.angle = math.atan((width / 2) / location)
+
+    def set_sensor_position(self, location):
+        #Sets the position of the sensor relative to the robot.
+        self.set_geometry(self.width, location)
+        print("Sensor position set to", location)
+
+    def set_sensor_width(self, width):
+        #Sets the width of the sensor's detection area.
+        self.set_geometry(width, self.location)
+        print("Sensor width set to", width)
 
     def update_position(self, robot):
         a = robot.angle - self.angle
@@ -130,3 +143,4 @@ class MotorController:
     
     def set_acceleration(self, acceleration):
         self.acceleration = acceleration
+        print("Acceleration set to", acceleration)

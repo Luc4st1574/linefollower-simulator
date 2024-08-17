@@ -7,12 +7,12 @@ class PIDregulator:
         self.i = 0.0
         self.d = 0.0
         self.speed = 0.0
-        self.dt = 0.0
+        self.dt = 0
         self.last_error = 0.0
         self.sumLinePositions = 0.0
         self.motor_ctrl = motor_ctrl
         self.sensor = sensor
-        self.timer = None
+        self.timer = threading.Thread(target=self.run)
         self.running = False # Flag to indicate when the loop is running and control it
         
     def star_PID_regulator(self):
@@ -21,7 +21,9 @@ class PIDregulator:
         self.timer.start()
         
     def set_frecuency(self, freq):
+        freq = int(freq)
         self.dt = 1000/freq
+        print("Frequency:", freq)
         
     def run(self):
         tm = time.time()
@@ -59,15 +61,19 @@ class PIDregulator:
     
     def set_p (self, p):
         self.p = p
+        print("P:", self.p)
     
     def set_i (self, i):
         self.i = i
+        print("I:", self.i)
         
     def set_d (self, d):
         self.d = d
+        print("D:", self.d)
         
     def set_speed (self, speed):
         self.speed = speed
+        print("Speed:", self.speed)
         
     def stop(self):
         self.running = False  # Set the flag to False to stop the loop
