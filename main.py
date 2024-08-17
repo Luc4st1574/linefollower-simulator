@@ -3,7 +3,6 @@ from shapely.geometry import LineString
 from src.robot import Robot, MotorController, Sensor
 from src.PIDregulator import PIDregulator
 from src.bezier_intersection import BezierIntersection
-from src.robot_sandbox import RobotCanvas, SimulationEngine
 
 class ControlPanel(tk.Tk):
     def __init__(self, path):
@@ -14,13 +13,12 @@ class ControlPanel(tk.Tk):
         self.motor_ctrl = MotorController()
         self.sensor = Sensor(path)
         self.robot = Robot(path, x=0.0, y=0.0, angle=0.0)
-        self.robot.set_wheel_gauge(40)
         self.pid = PIDregulator(self.motor_ctrl, self.sensor)
 
+        print("Path coordinates:", path.coords)
+        
         # Initialize RobotCanvas and SimulationEngine
-        self.robot_canvas = RobotCanvas(self, width=600, height=300)
-        self.simulation_engine = SimulationEngine(self.robot, self.robot_canvas)
-
+        self.robot_canvas = tk.Canvas(self, width=600, height=300, bg="white")
         # Layout configuration
         self.robot_canvas.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
         controls_frame = tk.Frame(self)
@@ -83,27 +81,15 @@ class ControlPanel(tk.Tk):
         accel_frame.grid(row=3, column=0, padx=10, pady=10)
 
         tk.Label(accel_frame, text="Acceleration:").grid(row=0, column=0)
-        self.accel_slider = tk.Scale(accel_frame, from_=0.1, to_=5.0, orient=tk.HORIZONTAL, 
+        self.accel_slider = tk.Scale(accel_frame, from_=0.1, to_=50.0, orient=tk.HORIZONTAL, 
                                         command=lambda a: self.motor_ctrl.set_acceleration(float(a)))
         self.accel_slider.grid(row=0, column=1)
-
-        # Start and Stop Buttons for PID regulator and Simulation
-        tk.Button(controls_frame, text="Start PID", command=self.start_simulation).grid(row=4, column=0, pady=10)
-        tk.Button(controls_frame, text="Stop PID", command=self.stop_simulation).grid(row=5, column=0, pady=10)
 
         # Configure grid weights
         self.grid_columnconfigure(0, weight=2)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
         controls_frame.grid_rowconfigure(4, weight=1)
-
-    def start_simulation(self):
-        self.pid.star_PID_regulator()
-        self.simulation_engine.start()
-
-    def stop_simulation(self):
-        self.pid.stop()
-        self.simulation_engine.stop()
 
 if __name__ == "__main__":
     # Example path: Define a simple LineString path for the sensor to follow
