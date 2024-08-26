@@ -1,12 +1,8 @@
 import tkinter as tk
-from shapely.geometry import LineString
 from src.robot import Robot, MotorController, Sensor
 from src.PIDregulator import PIDregulator
 from src.bezier_intersection import BezierIntersection
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.interpolate import splprep, splev
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from src.sand_box import SandBox
 
 
 class ControlPanel(tk.Tk):
@@ -17,10 +13,8 @@ class ControlPanel(tk.Tk):
         # Initialize MotorController, Sensor, and Robot
         self.motor_ctrl = MotorController()
         self.sensor = Sensor(path)
-        self.robot = Robot(path, x=0.0, y=0.0, angle=0.0)
+        self.robot = Robot(path)
         self.pid = PIDregulator(self.motor_ctrl, self.sensor)
-
-        print("Path coordinates:", path.coords)
         
         # Initialize RobotCanvas
         self.canvas_width = 600
@@ -31,7 +25,8 @@ class ControlPanel(tk.Tk):
         controls_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
 
         # Draw the shape on the canvas
-        self.draw_shape()
+        self.sandbox = SandBox()  # Initialize the SandBox class
+        self.sandbox.draw_shape(self.robot_canvas)
 
         # PID Controls
         pid_frame = tk.LabelFrame(controls_frame, text="PID Controller", padx=10, pady=10)
@@ -98,41 +93,8 @@ class ControlPanel(tk.Tk):
         self.grid_rowconfigure(0, weight=1)
         controls_frame.grid_rowconfigure(4, weight=1)
 
-    def draw_shape(self):
-        # Define the initial points for the shape
-        points = np.array([
-            [0.2, 0.5],
-            [0.4, 0.8],
-            [0.7, 0.9],
-            [0.9, 0.6],
-            [0.8, 0.3],
-            [0.5, 0.2],
-            [0.2, 0.4],
-            [0.2, 0.5]  # Closing the shape by repeating the first point
-        ])
-
-        # Separate the points into x and y coordinates
-        x, y = points.T
-
-        # Use B-spline interpolation to smooth the curve
-        tck, u = splprep([x, y], s=0, per=True)  # s=0 gives us a curve that passes through all points
-        u_new = np.linspace(u.min(), u.max(), 1000)
-        x_new, y_new = splev(u_new, tck, der=0)
-
-        # Create a matplotlib figure
-        fig, ax = plt.subplots(figsize=(6, 3))
-        ax.plot(x_new, y_new, 'k-')  # 'k-' means black line
-        ax.fill(x_new, y_new, edgecolor='red', fill=False)  # Fill the shape with no color
-        ax.set_aspect('equal', adjustable='box')
-        ax.axis('off')  # Turn off the axis
-
-        # Embed the plot in the Tkinter canvas
-        canvas = FigureCanvasTkAgg(fig, master=self.robot_canvas)
-        canvas.draw()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-
 # Example usage
 if __name__ == "__main__":
-    path = LineString([(0, 0), (1, 0), (1, 1), (0, 1)])
+    path = ([(0, 0), (1, 0), (1, 1), (0, 1)])
     app = ControlPanel(path)
     app.mainloop()

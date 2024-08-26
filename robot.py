@@ -7,14 +7,20 @@ import time
 
 class Robot:
     
-    def __init__(self, path, x, y, angle):
+    def __init__(self, path):
         
         #Rotation of the robot, in radians
-        self.angle = angle
+        self.angle = 0.0
         #X coordinate of the robot centre of rotation
-        self.x = x
+        self.x =  0.0
         #Y coordinate of the robot centre of rotation
-        self.y = y
+        self.y = 0.0
+        
+        self.path = path
+        
+        self.index = 0
+        
+        self.position = self.path[self.index]
         
         #Default rotation of the robot, in radians
         self.default_angle = 0.0
@@ -34,7 +40,11 @@ class Robot:
         self.set_wheel_gauge(40)
         self.reset_position()
         
-    
+    def update_position(self):
+        if self.index < len(self.path) - 1:
+            self.index += 1
+        self.position = self.path[self.index]
+        
     def reset_position(self):
         self.x = self.default_x
         self.y = self.default_y
@@ -68,7 +78,6 @@ class Robot:
         new_y = self.y + distance * math.sin(angle)
         return new_x, new_y
     
-
 
 class Sensor:
     def __init__(self, path):
@@ -144,3 +153,6 @@ class MotorController:
     def set_acceleration(self, acceleration):
         self.acceleration = acceleration
         print("Acceleration set to", acceleration)
+        
+        
+        
