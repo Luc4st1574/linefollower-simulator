@@ -1,8 +1,7 @@
 import math
 from shapely.affinity import rotate, translate
 from shapely.geometry import LineString, Point, box
-import threading
-import time
+from matplotlib.patches import Rectangle
 
 
 class Robot:
@@ -29,17 +28,23 @@ class Robot:
         
         #Motor controller of the robot
         self.motor_ctrl = MotorController()
-        self.robot_width = 20.0
-        self.wheel_gauge = 0.0
-        self.robot_height = 0.0
+        self.width = 0.05
+        self.wheel_gauge = 0.05
+        self.height = 0.03
+        self.observers = []
         
         #Sensor of the robot
         self.line_sensor = Sensor(path)
-        self.bounds = box(-self.robot_width / 2, -self.robot_height / 2, self.robot_width / 2, self.robot_height / 2)
+        self.bounds = box(-self.width/ 2, -self.height / 2, self.width / 2, self.height / 2)
         
-        self.set_wheel_gauge(40)
+        self.set_wheel_gauge(self.width)
         self.reset_position()
         
+    def set_position(self, x, y, angle):
+        self.x = x
+        self.y = y
+        self.angle = angle
+    
     def update_position(self):
         if self.index < len(self.path) - 1:
             self.index += 1
@@ -52,10 +57,19 @@ class Robot:
         print("Robot position reset", self.x, self.y, self.angle)
         
     def set_wheel_gauge(self, gauge):
-        self.wheel_gauge = gauge
-        self.robot_height = gauge
-        self.bounds = box(-self.robot_width / 2, -self.robot_height / 2, self.robot_width / 2, self.robot_height / 2)
-        print("Wheel gauge set to", gauge)
+        self.wheel_gauge = max(0.01, min(0.2, gauge))  # Limit the gauge between 0.01 and 0.2
+        self.width = self.wheel_gauge
+        self.height = self.wheel_gauge * 0.6  # Adjust height proportionally
+        self.bounds = box(-self.width / 2, -self.height / 2, self.width / 2, self.height / 2)
+        self.notify_observers()
+        print("Wheel gauge set to", self.wheel_gauge)
+        
+    def add_observer(self, observer):
+        self.observers.append(observer)
+
+    def notify_observers(self):
+        for observer in self.observers:
+            observer.update_robot_size()
     
     def move(self):
         self.motor_ctrl.update()
