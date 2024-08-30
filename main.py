@@ -5,14 +5,14 @@ from src.pid_regulator import PIDregulator
 from src.sand_box import SandBox
 
 class ControlPanel(tk.Tk):
-    def __init__(self, path):
+    def __init__(self):
         super().__init__()
         self.title("Control Panel")
 
         # Initialize MotorController, Sensor, and Robot
         self.motor_ctrl = MotorController()
-        self.sensor = Sensor(path)
-        self.robot = Robot(path)
+        self.sensor = Sensor()
+        self.robot = Robot()
         self.pid = PIDregulator(self.motor_ctrl, self.sensor)
         
         # Initialize RobotCanvas
@@ -26,7 +26,6 @@ class ControlPanel(tk.Tk):
         # Draw the shape on the canvas
         self.sandbox = SandBox(self.robot)
         self.sandbox.draw_shape(self.robot_canvas)
-        self.sandbox.start_animation()  # Start the animation immediately
 
         # PID Controls
         pid_frame = ttk.LabelFrame(controls_frame, text="PID Controller", padding=(10, 10))
@@ -87,26 +86,26 @@ class ControlPanel(tk.Tk):
         self.accel_slider = ttk.Scale(accel_frame, from_=0.1, to=50.0, orient=tk.HORIZONTAL, 
                                     command=lambda a: self.motor_ctrl.set_acceleration(float(a)))
         self.accel_slider.grid(row=0, column=1, sticky="ew")
-
+        
         # Configure grid weights
         self.grid_columnconfigure(0, weight=2)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
         controls_frame.grid_rowconfigure(4, weight=1)
 
+        # Bind the window close event
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
     def update_wheel_gauge(self, value):
         self.robot.set_wheel_gauge(float(value))
 
+    def on_closing(self):
+        if hasattr(self.sandbox, 'ani') and self.sandbox.ani is not None:
+            self.sandbox.ani.event_source.stop()
+        self.quit()
+        self.destroy()
+
 # Example usage
 if __name__ == "__main__":
-    path = ([0.2, 0.5],
-            [0.4, 0.8],
-            [0.7, 0.9],
-            [0.9, 0.6],
-            [0.8, 0.3],
-            [0.5, 0.2],
-            [0.2, 0.4],
-            [0.2, 0.5])
-    
-    app = ControlPanel(path)
+    app = ControlPanel()
     app.mainloop()
