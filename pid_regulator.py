@@ -7,76 +7,70 @@ class PIDregulator:
         self.i = 0.0
         self.d = 0.0
         self.speed = 0.0
-        self.dt = 0
+        self.dt = 20  # Default to 50Hz
         self.last_error = 0.0
         self.sumLinePositions = 0.0
         self.motor_ctrl = motor_ctrl
         self.sensor = sensor
-        self.timer = threading.Thread(target=self.run)
-        self.running = False # Flag to indicate when the loop is running and control it
-        
-    def star_PID_regulator(self):
-        self.running = True# Set the flag to True to start the loop
-        self.timer = threading.Thread(target=self.running)
-        self.timer.start()
-        
+        self.running = False
+        self.thread = None
+
     def set_frecuency(self, freq):
-        freq = int(freq)
-        self.dt = 1000/freq
+        freq = max(1, min(int(freq), 50))  # Limit frequency between 1 and 50 Hz
+        self.dt = 1000 / freq
         print("Frequency:", freq)
-        
+
     def run(self):
-        tm = time.time()
         while self.running:
-            
-            position = self.sensor.get_line_position()
+            position = self.sensor.last_seen
             
             if abs(position) > 1:
-                if (position < 0):
+                if position < 0:
                     self.motor_ctrl.set_speed(0, self.speed)
                 else:
                     self.motor_ctrl.set_speed(self.speed, 0)
             else:
                 error = 0.0 - position
-                self.sumLinePositions += (error-self.last_error)*self.dt
+                self.sumLinePositions += (error - self.last_error) * self.dt / 1000  # Convert dt to seconds
                 
-                u = self.sumLinePositions*error/1
+                u = self.p * error + self.i * self.sumLinePositions + self.d * (error - self.last_error) / (self.dt / 1000)
                 u = u * self.speed
-                self.last_error = position
+                self.last_error = error
                 
                 if u < 0:
-                    vl = min(-u, self.speed)
+                    vl = max(self.speed + u, 0)
                     vr = self.speed
                 else:
                     vl = self.speed
-                    vr = min(u, self.speed)
+                    vr = max(self.speed - u, 0)
                 
                 self.motor_ctrl.set_speed(vl, vr)
-                
-                try:
-                    tm += self.dt
-                    time.sleep(max(0, tm-time.time()))
-                except InterruptedError:
-                    break
-    
-    def set_p (self, p):
+            
+            time.sleep(self.dt / 1000)
+
+    def start(self):
+        if not self.running:
+            self.running = True
+            self.thread = threading.Thread(target=self.run)
+            self.thread.start()
+
+    def stop(self):
+        self.running = False
+        if self.thread:
+            self.thread.join()
+
+    def set_p(self, p):
         self.p = p
         print("P:", self.p)
     
-    def set_i (self, i):
+    def set_i(self, i):
         self.i = i
         print("I:", self.i)
         
-    def set_d (self, d):
+    def set_d(self, d):
         self.d = d
         print("D:", self.d)
         
-    def set_speed (self, speed):
+    def set_speed(self, speed):
         self.speed = speed
         print("Speed:", self.speed)
-        
-    def stop(self):
-        self.running = False  # Set the flag to False to stop the loop
-        if self.timer is not None:
-            self.timer.join()  # Wait for the thread to finish
-

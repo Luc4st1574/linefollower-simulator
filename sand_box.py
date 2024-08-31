@@ -1,14 +1,15 @@
 import numpy as np
-import math
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.patches import Rectangle
 from matplotlib.transforms import Affine2D
 from matplotlib.animation import FuncAnimation
+from shapely.geometry import LineString, Point
 
 class SandBox:
-    def __init__(self, robot):
+    def __init__(self, robot, pid_regulator):
         self.robot = robot
+        self.pid_regulator = pid_regulator
         self.path_index = 0
         self.fig = None
         self.ax = None
@@ -16,9 +17,11 @@ class SandBox:
         self.canvas_agg = None
         self.ani = None
         self.egg_path = self.generate_egg_shape()
-        self.robot.add_observer(self)  # Add SandBox as an observer to the robot
-        self.speed = 1.0  # Default speed
-        self.initial_position = self.egg_path[0]  # Store the initial position
+        self.path_line = LineString(self.egg_path)
+        self.robot.add_observer(self)
+        self.target_speed = 1.0
+        self.initial_position = self.egg_path[0]
+        self.animation_running = False
 
     def generate_egg_shape(self, a=0.5, b=0.65, num_points=1000, scale_factor=0.75):
         theta = np.linspace(0, 2 * np.pi, num_points)
@@ -33,11 +36,9 @@ class SandBox:
         self.ax.plot(x, y, 'k-', linewidth=2)
         self.ax.fill(x, y, edgecolor='black', fill=False)
 
-        # Calculate the bounds of the path
         x_min, x_max = min(x), max(x)
         y_min, y_max = min(y), max(y)
 
-        # Add some padding to the bounds
         padding = 0.1
         x_range = x_max - x_min
         y_range = y_max - y_min
@@ -47,24 +48,21 @@ class SandBox:
         self.ax.set_aspect('equal', adjustable='box')
         self.ax.axis('off')
 
-        # Initialize robot position
         self.robot.x, self.robot.y = self.initial_position
 
-        # Initialize the robot's angle to face the path
         next_position = self.egg_path[1]
         dx = next_position[0] - self.initial_position[0]
         dy = next_position[1] - self.initial_position[1]
         self.robot.angle = np.arctan2(dy, dx)
 
-        # Create the robot patch with the correct orientation
         self.robot_patch = Rectangle(
-            (0, -self.robot.height / 2),  # Center the rectangle on its width
+            (0, -self.robot.height / 2),
             self.robot.width,
             self.robot.height,
             color="red",
-            zorder=10  # Ensure the robot is drawn on top
+            zorder=10
         )
-        self.update_robot()  # This will set the correct position and rotation
+        self.update_robot()
 
         self.ax.add_patch(self.robot_patch)
 
@@ -76,7 +74,11 @@ class SandBox:
 
     def start_animation(self):
         def update(frame):
-            self.path_index = (self.path_index + self.speed) % len(self.egg_path)
+            if not self.animation_running:
+                return self.robot_patch,
+
+            current_speed = self.robot.update_speed(self.target_speed)
+            self.path_index = (self.path_index + current_speed) % len(self.egg_path)
             new_position = self.egg_path[int(self.path_index)]
             self.robot.x, self.robot.y = new_position
 
@@ -86,37 +88,38 @@ class SandBox:
             dy = next_position[1] - new_position[1]
             self.robot.angle = np.arctan2(dy, dx)
 
+            self.robot.sensor.update_position(self.robot)
+
+            line_position = self.robot.sensor.find_closest_intersection(self.path_line)
+            if line_position:
+                normalized_position = (line_position.x - self.robot.x) / (self.robot.sensor.width / 2)
+                self.pid_regulator.sensor.last_seen = normalized_position
+
             self.update_robot()
             return self.robot_patch,
 
+        self.animation_running = True
         self.ani = FuncAnimation(
-            self.fig, update, frames=len(self.egg_path), interval=50, blit=True, repeat=True
+            self.fig, update, frames=None, interval=50, blit=True, repeat=True
         )
         self.canvas_agg.draw()
 
     def update_robot(self):
         if self.robot_patch:
-            # Update the width and height of the patch
             self.robot_patch.set_width(self.robot.width)
             self.robot_patch.set_height(self.robot.height)
             
-            # Create a new transform
             t = Affine2D().rotate(self.robot.angle + np.pi/2).translate(self.robot.x, self.robot.y)
             self.robot_patch.set_transform(t + self.ax.transData)
             
-            # Update the patch's xy position to keep it centered on its width
             self.robot_patch.set_xy((-self.robot.width / 2, -self.robot.height / 2))
             
             self.fig.canvas.draw_idle()
             self.fig.canvas.flush_events()
 
-    def update_robot_width(self):
-        if self.robot_patch:
-            self.update_robot()
-
     def set_speed(self, speed):
-        self.speed = speed / 10.0  # Adjust the scaling factor as needed
-        print(f"Speed set to {self.speed}")
+        self.target_speed = speed / 100.0
+        print(f"Target speed set to {self.target_speed}")
 
     def reset_position(self):
         self.path_index = 0
@@ -125,10 +128,15 @@ class SandBox:
         dx = next_position[0] - self.initial_position[0]
         dy = next_position[1] - self.initial_position[1]
         self.robot.angle = np.arctan2(dy, dx)
+        self.robot.current_speed = 0.0
         self.update_robot()
         print("Robot position reset")
 
-    def on_close(self, event):
+    def on_close(self):
+        self.animation_running = False
         if self.ani is not None:
             self.ani.event_source.stop()
-        plt.close(self.fig)
+            self.ani = None
+        if self.fig is not None:
+            plt.close(self.fig)
+            self.fig = None
