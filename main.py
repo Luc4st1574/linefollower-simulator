@@ -47,8 +47,8 @@ class ControlPanel(tk.Tk):
         self.d_slider.grid(row=2, column=1, sticky="ew")
 
         ttk.Label(pid_frame, text="Speed:").grid(row=3, column=0, sticky="e")
-        self.speed_slider = ttk.Scale(pid_frame, from_=0.0, to=100.0, orient=tk.HORIZONTAL, 
-                                    command=lambda s: self.pid.set_speed(float(s)))
+        self.speed_slider = ttk.Scale(pid_frame, from_=0.0, to=200.0, orient=tk.HORIZONTAL, 
+                                    command=self.set_speed)
         self.speed_slider.grid(row=3, column=1, sticky="ew")
 
         ttk.Label(pid_frame, text="Frequency:").grid(row=4, column=0, sticky="e")
@@ -98,6 +98,11 @@ class ControlPanel(tk.Tk):
 
     def update_wheel_gauge(self, value):
         self.robot.set_wheel_gauge(float(value))
+
+    def set_speed(self, speed):
+        speed_value = float(speed)
+        self.sandbox.set_speed(speed_value)
+        self.pid.set_speed(speed_value)
 
     def on_closing(self):
         if hasattr(self.sandbox, 'ani') and self.sandbox.ani is not None:

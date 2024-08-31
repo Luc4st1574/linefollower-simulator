@@ -11,7 +11,7 @@ class Robot:
         self.angle = 0.0
         self.width = 0.10
         self.height = 0.06  # Fixed height
-        self.wheel_gauge = 0.08
+        self.wheel_gauge = 0.10
         self.observers = []
 
     def set_wheel_gauge(self, gauge):
@@ -24,7 +24,7 @@ class Robot:
 
     def notify_observers(self):
         for observer in self.observers:
-            observer.update_robot()
+            observer.update_robot_width()
 
     def reset_position(self):
         self.x = 0.0

@@ -3,6 +3,7 @@ import math
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.patches import Rectangle
+from matplotlib.transforms import Affine2D
 from matplotlib.animation import FuncAnimation
 
 class SandBox:
@@ -15,6 +16,8 @@ class SandBox:
         self.canvas_agg = None
         self.ani = None
         self.egg_path = self.generate_egg_shape()
+        self.robot.add_observer(self)  # Add SandBox as an observer to the robot
+        self.speed = 1.0  # Default speed
 
     def generate_egg_shape(self, a=0.5, b=0.65, num_points=1000, scale_factor=0.75):
         theta = np.linspace(0, 2 * np.pi, num_points)
@@ -47,17 +50,22 @@ class SandBox:
         initial_position = self.egg_path[0]
         self.robot.x, self.robot.y = initial_position
 
-        # Adjust robot size to be proportionate
-        self.robot.width *= 1.5
-        self.robot.height *= 1.5
+        # Initialize the robot's angle to face the path
+        next_position = self.egg_path[1]
+        dx = next_position[0] - initial_position[0]
+        dy = next_position[1] - initial_position[1]
+        self.robot.angle = np.arctan2(dy, dx)
 
+        # Create the robot patch with the correct orientation
         self.robot_patch = Rectangle(
-            (self.robot.x - self.robot.width / 2, self.robot.y - self.robot.height / 2),
+            (0, -self.robot.height / 2),  # Center the rectangle on its width
             self.robot.width,
             self.robot.height,
             color="red",
             zorder=10  # Ensure the robot is drawn on top
         )
+        self.update_robot()  # This will set the correct position and rotation
+
         self.ax.add_patch(self.robot_patch)
 
         self.canvas_agg = FigureCanvasTkAgg(self.fig, master=canvas)
@@ -68,15 +76,15 @@ class SandBox:
 
     def start_animation(self):
         def update(frame):
-            self.path_index = frame % len(self.egg_path)
-            new_position = self.egg_path[self.path_index]
+            self.path_index = (self.path_index + self.speed) % len(self.egg_path)
+            new_position = self.egg_path[int(self.path_index)]
             self.robot.x, self.robot.y = new_position
 
-            if self.path_index < len(self.egg_path) - 1:
-                next_position = self.egg_path[(self.path_index + 1) % len(self.egg_path)]
-                dx = next_position[0] - new_position[0]
-                dy = next_position[1] - new_position[1]
-                self.robot.angle = np.arctan2(dy, dx)
+            next_index = (int(self.path_index) + 1) % len(self.egg_path)
+            next_position = self.egg_path[next_index]
+            dx = next_position[0] - new_position[0]
+            dy = next_position[1] - new_position[1]
+            self.robot.angle = np.arctan2(dy, dx)
 
             self.update_robot()
             return self.robot_patch,
@@ -88,12 +96,27 @@ class SandBox:
 
     def update_robot(self):
         if self.robot_patch:
+            # Update the width and height of the patch
             self.robot_patch.set_width(self.robot.width)
             self.robot_patch.set_height(self.robot.height)
-            self.robot_patch.set_xy((self.robot.x - self.robot.width / 2, self.robot.y - self.robot.height / 2))
-            self.robot_patch.set_angle(np.degrees(self.robot.angle))
+            
+            # Create a new transform
+            t = Affine2D().rotate(self.robot.angle + np.pi/2).translate(self.robot.x, self.robot.y)
+            self.robot_patch.set_transform(t + self.ax.transData)
+            
+            # Update the patch's xy position to keep it centered on its width
+            self.robot_patch.set_xy((-self.robot.width / 2, -self.robot.height / 2))
+            
             self.fig.canvas.draw_idle()
             self.fig.canvas.flush_events()
+
+    def update_robot_width(self):
+        if self.robot_patch:
+            self.update_robot()
+
+    def set_speed(self, speed):
+        self.speed = speed / 10.0  # Adjust the scaling factor as needed
+        print(f"Speed set to {self.speed}")
 
     def on_close(self, event):
         if self.ani is not None:
