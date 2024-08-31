@@ -9,9 +9,9 @@ class Robot:
         self.x = 0.0
         self.y = 0.0
         self.angle = 0.0
-        self.width = 0.05
-        self.height = 0.03  # Fixed height
-        self.wheel_gauge = 0.05
+        self.width = 0.10
+        self.height = 0.06  # Fixed height
+        self.wheel_gauge = 0.08
         self.observers = []
 
     def set_wheel_gauge(self, gauge):
