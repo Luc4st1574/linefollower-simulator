@@ -8,7 +8,7 @@ from src.sand_box import SandBox
 class ControlPanel(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Control Panel")
+        self.title("Line Follower Robot Simulator")
 
         self.motor_ctrl = MotorController()
         self.sensor = Sensor()
