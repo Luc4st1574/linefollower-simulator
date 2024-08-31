@@ -8,9 +8,9 @@ class Robot:
         self.x = 0.0
         self.y = 0.0
         self.angle = 0.0
-        self.width = 0.10
-        self.height = 0.06  # Fixed height
-        self.wheel_gauge = 0.08
+        self.width = 0.05 
+        self.height = 0.05  # Fixed height
+        self.wheel_gauge = 0.05 
         self.observers = []
         self.acceleration = 0.1  # Default acceleration
         self.current_speed = 0.0  # Current speed of the robot
