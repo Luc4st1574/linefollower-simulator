@@ -18,6 +18,7 @@ class SandBox:
         self.egg_path = self.generate_egg_shape()
         self.robot.add_observer(self)  # Add SandBox as an observer to the robot
         self.speed = 1.0  # Default speed
+        self.initial_position = self.egg_path[0]  # Store the initial position
 
     def generate_egg_shape(self, a=0.5, b=0.65, num_points=1000, scale_factor=0.75):
         theta = np.linspace(0, 2 * np.pi, num_points)
@@ -47,13 +48,12 @@ class SandBox:
         self.ax.axis('off')
 
         # Initialize robot position
-        initial_position = self.egg_path[0]
-        self.robot.x, self.robot.y = initial_position
+        self.robot.x, self.robot.y = self.initial_position
 
         # Initialize the robot's angle to face the path
         next_position = self.egg_path[1]
-        dx = next_position[0] - initial_position[0]
-        dy = next_position[1] - initial_position[1]
+        dx = next_position[0] - self.initial_position[0]
+        dy = next_position[1] - self.initial_position[1]
         self.robot.angle = np.arctan2(dy, dx)
 
         # Create the robot patch with the correct orientation
@@ -117,6 +117,16 @@ class SandBox:
     def set_speed(self, speed):
         self.speed = speed / 10.0  # Adjust the scaling factor as needed
         print(f"Speed set to {self.speed}")
+
+    def reset_position(self):
+        self.path_index = 0
+        self.robot.x, self.robot.y = self.initial_position
+        next_position = self.egg_path[1]
+        dx = next_position[0] - self.initial_position[0]
+        dy = next_position[1] - self.initial_position[1]
+        self.robot.angle = np.arctan2(dy, dx)
+        self.update_robot()
+        print("Robot position reset")
 
     def on_close(self, event):
         if self.ani is not None:

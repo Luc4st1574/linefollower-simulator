@@ -47,7 +47,7 @@ class ControlPanel(tk.Tk):
         self.d_slider.grid(row=2, column=1, sticky="ew")
 
         ttk.Label(pid_frame, text="Speed:").grid(row=3, column=0, sticky="e")
-        self.speed_slider = ttk.Scale(pid_frame, from_=0.0, to=200.0, orient=tk.HORIZONTAL, 
+        self.speed_slider = ttk.Scale(pid_frame, from_=0.0, to=100.0, orient=tk.HORIZONTAL, 
                                     command=self.set_speed)
         self.speed_slider.grid(row=3, column=1, sticky="ew")
 
@@ -76,7 +76,7 @@ class ControlPanel(tk.Tk):
                                             command=lambda w: self.sensor.set_sensor_width(int(float(w))))
         self.sensor_width_slider.grid(row=2, column=1, sticky="ew")
 
-        ttk.Button(controls_frame, text="Reset Position", command=self.robot.reset_position).grid(row=2, column=0, pady=10)
+        ttk.Button(controls_frame, text="Reset Position", command=self.reset_position).grid(row=2, column=0, pady=10)
 
         # Acceleration Control
         accel_frame = ttk.LabelFrame(controls_frame, text="Acceleration", padding=(10, 10))
@@ -103,6 +103,10 @@ class ControlPanel(tk.Tk):
         speed_value = float(speed)
         self.sandbox.set_speed(speed_value)
         self.pid.set_speed(speed_value)
+
+    def reset_position(self):
+        self.sandbox.reset_position()
+        self.robot.reset_position()
 
     def on_closing(self):
         if hasattr(self.sandbox, 'ani') and self.sandbox.ani is not None:
