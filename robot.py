@@ -1,6 +1,7 @@
 import math
 from shapely.geometry import LineString, Point
 from shapely.ops import split
+from matplotlib.transforms import Affine2D
 
 class Robot:
     def __init__(self, sensor):
@@ -37,7 +38,7 @@ class Robot:
     def update_position(self, x, y, angle):
         self.x = x
         self.y = y
-        self.angle = angle
+        self.angle = angle + math.pi/2  # Add 90 degrees to the angle
         self.notify_observers()
 
     def set_acceleration(self, acceleration):
@@ -54,33 +55,36 @@ class Robot:
 class Sensor:
     def __init__(self):
         self.sensor_line = LineString()
-        self.set_geometry(30, 10)  # Default width and distance
+        self.set_geometry(0.05, 0.02)  # Default width and distance
         self.last_seen = 1
         
     def set_geometry(self, width, distance):
         self.width = width
-        self.distance = max(distance, 10)  # Ensure minimum distance of 0.1
-        self.hypotenuse = math.sqrt((width / 2)**2 + self.distance**2)
-        self.angle = math.atan((width / 2) / self.distance)
+        self.distance = max(distance, 0.02)  # Ensure minimum distance of 0.02
+        self.update_sensor_line()
 
     def set_sensor_position(self, distance):
-        self.set_geometry(self.width, distance)
+        self.set_geometry(self.width, distance / 100.0)  # Convert slider value to appropriate scale
         print("Sensor position set to", self.distance)
 
     def set_sensor_width(self, width):
-        self.set_geometry(width, self.distance)
-        print("Sensor width set to", width)
+        self.set_geometry(width / 100.0, self.distance)  # Convert slider value to appropriate scale
+        print("Sensor width set to", self.width)
+
+    def update_sensor_line(self):
+        y1 = -self.width / 2
+        y2 = self.width / 2
+        x = self.distance
+        self.sensor_line = LineString([(x, y1), (x, y2)])
 
     def update_position(self, robot):
-        a = robot.angle - self.angle
-        x1 = robot.x + self.hypotenuse * math.cos(a)
-        y1 = robot.y + self.hypotenuse * math.sin(a)
-        
-        a = robot.angle + self.angle
-        x2 = robot.x + self.hypotenuse * math.cos(a)
-        y2 = robot.y + self.hypotenuse * math.sin(a)
-        
-        self.sensor_line = LineString([(x1, y1), (x2, y2)])
+        self.update_sensor_line()
+        # Rotate the sensor line to align with the robot's direction and position it at the front
+        t = Affine2D().rotate(robot.angle).translate(
+            robot.x + robot.width / 2 * math.cos(robot.angle),
+            robot.y + robot.width / 2 * math.sin(robot.angle)
+        )
+        self.sensor_line = LineString(t.transform(self.sensor_line.coords))
     
     def find_closest_intersection(self, path):
         intersections = self.sensor_line.intersection(path)

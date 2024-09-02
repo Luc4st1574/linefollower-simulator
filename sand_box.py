@@ -66,9 +66,9 @@ class SandBox:
         self.ax.add_patch(self.robot_patch)
 
         # Initialize sensor line
-        self.robot.sensor.update_position(self.robot)
-        sensor_coords = self.robot.sensor.sensor_line.coords
-        self.sensor_line, = self.ax.plot(*zip(*sensor_coords), 'b-', linewidth=2, zorder=11)
+        sensor_x = [-self.robot.sensor.width / 2, self.robot.sensor.width / 2]
+        sensor_y = [self.robot.sensor.distance, self.robot.sensor.distance]
+        self.sensor_line, = self.ax.plot(sensor_x, sensor_y, 'b-', linewidth=2, zorder=11)
 
         self.update_robot()
 
@@ -92,7 +92,7 @@ class SandBox:
             next_position = self.egg_path[next_index]
             dx = next_position[0] - new_position[0]
             dy = next_position[1] - new_position[1]
-            self.robot.angle = np.arctan2(dy, dx)
+            self.robot.angle = np.arctan2(dy, dx) + np.pi/2  # Add 90 degrees to the angle
 
             self.robot.sensor.update_position(self.robot)
 
@@ -106,23 +106,31 @@ class SandBox:
 
         self.animation_running = True
         self.ani = FuncAnimation(
-            self.fig, update, frames=None, interval=50, blit=True, repeat=True
+            self.fig, update, frames=None, interval=50, blit=True, repeat=True,
+            cache_frame_data=False  # Add this line to address the warning
         )
         self.canvas_agg.draw()
 
     def update_robot(self):
         if self.robot_patch and self.sensor_line:
+            # Update robot
             self.robot_patch.set_width(self.robot.width)
             self.robot_patch.set_height(self.robot.height)
             
-            t = Affine2D().rotate(self.robot.angle + np.pi/2).translate(self.robot.x, self.robot.y)
-            self.robot_patch.set_transform(t + self.ax.transData)
+            robot_t = Affine2D().rotate(self.robot.angle).translate(self.robot.x, self.robot.y)
+            self.robot_patch.set_transform(robot_t + self.ax.transData)
             
             self.robot_patch.set_xy((-self.robot.width / 2, -self.robot.height / 2))
             
             # Update sensor line
-            sensor_coords = self.robot.sensor.sensor_line.coords
-            self.sensor_line.set_data(*zip(*sensor_coords))
+            sensor_x = [-self.robot.sensor.width / 2, self.robot.sensor.width / 2]
+            sensor_y = [self.robot.sensor.distance, self.robot.sensor.distance]
+            sensor_t = Affine2D().rotate(self.robot.angle).translate(
+                self.robot.x + self.robot.height / 2 * np.cos(self.robot.angle - np.pi/2),
+                self.robot.y + self.robot.height / 2 * np.sin(self.robot.angle - np.pi/2)
+            )
+            sensor_points = sensor_t.transform(list(zip(sensor_x, sensor_y)))
+            self.sensor_line.set_data(*zip(*sensor_points))
             
             self.fig.canvas.draw_idle()
             self.fig.canvas.flush_events()

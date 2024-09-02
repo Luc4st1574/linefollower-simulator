@@ -38,7 +38,7 @@ class ControlPanel(tk.Tk):
                                 command=lambda i: self.pid.set_i(float(i)))
         self.i_slider.grid(row=1, column=1, sticky="ew")
 
-        ttk.Label(pid_frame, text="D:").grid(row=2, column=0, sticky="e")
+        ttk.Label(pid_frame, text="D:").grid(row=2,column=0, sticky="e")
         self.d_slider = ttk.Scale(pid_frame, from_=0.0, to=10.0, orient=tk.HORIZONTAL, 
                                 command=lambda d: self.pid.set_d(float(d)))
         self.d_slider.grid(row=2, column=1, sticky="ew")
@@ -63,15 +63,15 @@ class ControlPanel(tk.Tk):
         self.wheel_gauge_slider.grid(row=0, column=1, sticky="ew")
 
         ttk.Label(robot_frame, text="Sensor Position:").grid(row=1, column=0, sticky="e")
-        self.sensor_position_slider = ttk.Scale(robot_frame, from_=10, to=90, orient=tk.HORIZONTAL, 
+        self.sensor_position_slider = ttk.Scale(robot_frame, from_=0.02, to=50, orient=tk.HORIZONTAL, 
                                                 command=self.update_sensor_position)
-        self.sensor_position_slider.set(self.sensor.distance)
+        self.sensor_position_slider.set(self.sensor.distance * 100)  # Convert to slider scale
         self.sensor_position_slider.grid(row=1, column=1, sticky="ew")
 
         ttk.Label(robot_frame, text="Sensor Width:").grid(row=2, column=0, sticky="e")
-        self.sensor_width_slider = ttk.Scale(robot_frame, from_=10, to=90, orient=tk.HORIZONTAL, 
+        self.sensor_width_slider = ttk.Scale(robot_frame, from_=5, to=20, orient=tk.HORIZONTAL, 
                                             command=self.update_sensor_width)
-        self.sensor_width_slider.set(self.sensor.width)
+        self.sensor_width_slider.set(self.sensor.width * 100)  # Convert to slider scale
         self.sensor_width_slider.grid(row=2, column=1, sticky="ew")
 
         ttk.Button(controls_frame, text="Reset Position", command=self.reset_position).grid(row=2, column=0, pady=10)
@@ -97,6 +97,7 @@ class ControlPanel(tk.Tk):
 
     def update_wheel_gauge(self, value):
         self.robot.set_wheel_gauge(float(value))
+        self.sandbox.update_robot()
 
     def set_speed(self, speed):
         speed_value = float(speed)
@@ -112,13 +113,11 @@ class ControlPanel(tk.Tk):
         self.robot.reset_position()
 
     def update_sensor_position(self, value):
-        distance = float(value)
-        self.sensor.set_sensor_position(distance)
+        self.sensor.set_sensor_position(float(value))
         self.sandbox.update_robot()
 
     def update_sensor_width(self, value):
-        width = float(value)
-        self.sensor.set_sensor_width(width)
+        self.sensor.set_sensor_width(float(value))
         self.sandbox.update_robot()
 
     def on_closing(self):
