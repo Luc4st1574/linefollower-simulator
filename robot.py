@@ -1,6 +1,5 @@
 import math
-from shapely.affinity import rotate, translate
-from shapely.geometry import LineString, Point, box
+from shapely.geometry import LineString, Point
 from shapely.ops import split
 
 class Robot:
@@ -55,21 +54,21 @@ class Robot:
 class Sensor:
     def __init__(self):
         self.sensor_line = LineString()
-        self.set_geometry(30, 20)  # Default width and location
+        self.set_geometry(30, 10)  # Default width and distance
         self.last_seen = 1
         
-    def set_geometry(self, width, location):
+    def set_geometry(self, width, distance):
         self.width = width
-        self.location = location
-        self.hypotenuse = math.sqrt((width / 2)**2 + location**2)
-        self.angle = math.atan((width / 2) / location)
+        self.distance = max(distance, 10)  # Ensure minimum distance of 0.1
+        self.hypotenuse = math.sqrt((width / 2)**2 + self.distance**2)
+        self.angle = math.atan((width / 2) / self.distance)
 
-    def set_sensor_position(self, location):
-        self.set_geometry(self.width, location)
-        print("Sensor position set to", location)
+    def set_sensor_position(self, distance):
+        self.set_geometry(self.width, distance)
+        print("Sensor position set to", self.distance)
 
     def set_sensor_width(self, width):
-        self.set_geometry(width, self.location)
+        self.set_geometry(width, self.distance)
         print("Sensor width set to", width)
 
     def update_position(self, robot):
@@ -78,7 +77,6 @@ class Sensor:
         y1 = robot.y + self.hypotenuse * math.sin(a)
         
         a = robot.angle + self.angle
-        
         x2 = robot.x + self.hypotenuse * math.cos(a)
         y2 = robot.y + self.hypotenuse * math.sin(a)
         
@@ -95,7 +93,6 @@ class Sensor:
         else:  # MultiPoint or GeometryCollection
             return min(intersections.geoms, key=lambda p: Point(p).distance(Point(self.sensor_line.coords[0])))
 
-    
 class MotorController:
     def __init__(self):
         self.left_speed = 0
@@ -129,6 +126,3 @@ class MotorController:
     def set_acceleration(self, acceleration):
         self.acceleration = acceleration
         print("Acceleration set to", acceleration)
-        
-        
-        

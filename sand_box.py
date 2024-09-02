@@ -14,6 +14,7 @@ class SandBox:
         self.fig = None
         self.ax = None
         self.robot_patch = None
+        self.sensor_line = None
         self.canvas_agg = None
         self.ani = None
         self.egg_path = self.generate_egg_shape()
@@ -62,9 +63,14 @@ class SandBox:
             color="red",
             zorder=10
         )
-        self.update_robot()
-
         self.ax.add_patch(self.robot_patch)
+
+        # Initialize sensor line
+        self.robot.sensor.update_position(self.robot)
+        sensor_coords = self.robot.sensor.sensor_line.coords
+        self.sensor_line, = self.ax.plot(*zip(*sensor_coords), 'b-', linewidth=2, zorder=11)
+
+        self.update_robot()
 
         self.canvas_agg = FigureCanvasTkAgg(self.fig, master=canvas)
         self.canvas_agg.draw()
@@ -75,7 +81,7 @@ class SandBox:
     def start_animation(self):
         def update(frame):
             if not self.animation_running:
-                return self.robot_patch,
+                return self.robot_patch, self.sensor_line
 
             current_speed = self.robot.update_speed(self.target_speed)
             self.path_index = (self.path_index + current_speed) % len(self.egg_path)
@@ -96,7 +102,7 @@ class SandBox:
                 self.pid_regulator.sensor.last_seen = normalized_position
 
             self.update_robot()
-            return self.robot_patch,
+            return self.robot_patch, self.sensor_line
 
         self.animation_running = True
         self.ani = FuncAnimation(
@@ -105,7 +111,7 @@ class SandBox:
         self.canvas_agg.draw()
 
     def update_robot(self):
-        if self.robot_patch:
+        if self.robot_patch and self.sensor_line:
             self.robot_patch.set_width(self.robot.width)
             self.robot_patch.set_height(self.robot.height)
             
@@ -113,6 +119,10 @@ class SandBox:
             self.robot_patch.set_transform(t + self.ax.transData)
             
             self.robot_patch.set_xy((-self.robot.width / 2, -self.robot.height / 2))
+            
+            # Update sensor line
+            sensor_coords = self.robot.sensor.sensor_line.coords
+            self.sensor_line.set_data(*zip(*sensor_coords))
             
             self.fig.canvas.draw_idle()
             self.fig.canvas.flush_events()
