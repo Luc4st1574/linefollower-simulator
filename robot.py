@@ -55,12 +55,12 @@ class Robot:
 class Sensor:
     def __init__(self):
         self.sensor_line = LineString()
-        self.set_geometry(0.05, 0.02)  # Default width and distance
+        self.set_geometry(0.05, 0.03)  # Default width, default distance
         self.last_seen = 1
         
     def set_geometry(self, width, distance):
         self.width = width
-        self.distance = max(distance, 0.02)  # Ensure minimum distance of 0.02
+        self.distance = max(distance, 0.01)  # Ensure minimum distance of 0.01
         self.update_sensor_line()
 
     def set_sensor_position(self, distance):
@@ -72,20 +72,25 @@ class Sensor:
         print("Sensor width set to", self.width)
 
     def update_sensor_line(self):
-        y1 = -self.width / 2
-        y2 = self.width / 2
-        x = self.distance
-        self.sensor_line = LineString([(x, y1), (x, y2)])
+        x1 = -self.width / 2
+        x2 = self.width / 2
+        y = 0  # The sensor line is always at y=0 in its local coordinate system
+        self.sensor_line = LineString([(x1, y), (x2, y)])
 
     def update_position(self, robot):
         self.update_sensor_line()
-        # Rotate the sensor line to align with the robot's direction and position it at the front
-        t = Affine2D().rotate(robot.angle).translate(
-            robot.x + robot.width / 2 * math.cos(robot.angle),
-            robot.y + robot.width / 2 * math.sin(robot.angle)
-        )
+        # Calculate the position of the sensor relative to the robot's center
+        sensor_x = 0
+        sensor_y = robot.height / 2 + self.distance
+        
+        # Create a transformation that rotates around the robot's center and then translates
+        t = Affine2D().rotate(robot.angle).translate(robot.x, robot.y)
+        
+        # Apply an additional translation to move the sensor to its correct position relative to the robot
+        t = t.translate(sensor_x, sensor_y)
+        
         self.sensor_line = LineString(t.transform(self.sensor_line.coords))
-    
+
     def find_closest_intersection(self, path):
         intersections = self.sensor_line.intersection(path)
         if intersections.is_empty:
@@ -96,6 +101,18 @@ class Sensor:
             return Point(intersections.coords[0])
         else:  # MultiPoint or GeometryCollection
             return min(intersections.geoms, key=lambda p: Point(p).distance(Point(self.sensor_line.coords[0])))
+
+    def find_closest_intersection(self, path):
+        intersections = self.sensor_line.intersection(path)
+        if intersections.is_empty:
+            return None
+        elif isinstance(intersections, Point):
+            return intersections
+        elif isinstance(intersections, LineString):
+            return Point(intersections.coords[0])
+        else:  # MultiPoint or GeometryCollection
+            return min(intersections.geoms, key=lambda p: Point(p).distance(Point(self.sensor_line.coords[0])))
+        
 
 class MotorController:
     def __init__(self):

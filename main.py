@@ -63,13 +63,13 @@ class ControlPanel(tk.Tk):
         self.wheel_gauge_slider.grid(row=0, column=1, sticky="ew")
 
         ttk.Label(robot_frame, text="Sensor Position:").grid(row=1, column=0, sticky="e")
-        self.sensor_position_slider = ttk.Scale(robot_frame, from_=0.02, to=50, orient=tk.HORIZONTAL, 
+        self.sensor_position_slider = ttk.Scale(robot_frame, from_=0.03, to=50, orient=tk.HORIZONTAL, 
                                                 command=self.update_sensor_position)
         self.sensor_position_slider.set(self.sensor.distance * 100)  # Convert to slider scale
         self.sensor_position_slider.grid(row=1, column=1, sticky="ew")
 
         ttk.Label(robot_frame, text="Sensor Width:").grid(row=2, column=0, sticky="e")
-        self.sensor_width_slider = ttk.Scale(robot_frame, from_=5, to=20, orient=tk.HORIZONTAL, 
+        self.sensor_width_slider = ttk.Scale(robot_frame, from_=2, to=20, orient=tk.HORIZONTAL, 
                                             command=self.update_sensor_width)
         self.sensor_width_slider.set(self.sensor.width * 100)  # Convert to slider scale
         self.sensor_width_slider.grid(row=2, column=1, sticky="ew")

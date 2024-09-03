@@ -107,7 +107,7 @@ class SandBox:
         self.animation_running = True
         self.ani = FuncAnimation(
             self.fig, update, frames=None, interval=50, blit=True, repeat=True,
-            cache_frame_data=False  # Add this line to address the warning
+            cache_frame_data=False
         )
         self.canvas_agg.draw()
 
@@ -123,14 +123,9 @@ class SandBox:
             self.robot_patch.set_xy((-self.robot.width / 2, -self.robot.height / 2))
             
             # Update sensor line
-            sensor_x = [-self.robot.sensor.width / 2, self.robot.sensor.width / 2]
-            sensor_y = [self.robot.sensor.distance, self.robot.sensor.distance]
-            sensor_t = Affine2D().rotate(self.robot.angle).translate(
-                self.robot.x + self.robot.height / 2 * np.cos(self.robot.angle - np.pi/2),
-                self.robot.y + self.robot.height / 2 * np.sin(self.robot.angle - np.pi/2)
-            )
-            sensor_points = sensor_t.transform(list(zip(sensor_x, sensor_y)))
-            self.sensor_line.set_data(*zip(*sensor_points))
+            self.robot.sensor.update_position(self.robot)
+            sensor_coords = np.array(self.robot.sensor.sensor_line.coords)
+            self.sensor_line.set_data(sensor_coords[:, 0], sensor_coords[:, 1])
             
             self.fig.canvas.draw_idle()
             self.fig.canvas.flush_events()
