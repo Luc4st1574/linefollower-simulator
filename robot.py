@@ -102,18 +102,6 @@ class Sensor:
         else:  # MultiPoint or GeometryCollection
             return min(intersections.geoms, key=lambda p: Point(p).distance(Point(self.sensor_line.coords[0])))
 
-    def find_closest_intersection(self, path):
-        intersections = self.sensor_line.intersection(path)
-        if intersections.is_empty:
-            return None
-        elif isinstance(intersections, Point):
-            return intersections
-        elif isinstance(intersections, LineString):
-            return Point(intersections.coords[0])
-        else:  # MultiPoint or GeometryCollection
-            return min(intersections.geoms, key=lambda p: Point(p).distance(Point(self.sensor_line.coords[0])))
-        
-
 class MotorController:
     def __init__(self):
         self.left_speed = 0
