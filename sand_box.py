@@ -4,7 +4,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.patches import Rectangle
 from matplotlib.transforms import Affine2D
 from matplotlib.animation import FuncAnimation
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString
 
 class SandBox:
     def __init__(self, robot, pid_regulator):
