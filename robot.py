@@ -1,6 +1,5 @@
 import math
 from shapely.geometry import LineString, Point
-from shapely.ops import split
 from matplotlib.transforms import Affine2D
 
 class Robot:
