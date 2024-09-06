@@ -24,7 +24,7 @@
 ## How it works
 
 <p align="center">
-  <img src="https://github.com/Luc4st1574/LineFollowerRobot/blob/main/Resources/preview.gif" alt="logo" width="500">
+  <img src="https://github.com/Luc4st1574/linefollower-simulator/blob/main/Resources/preview.gif" alt="logo" width="500">
 </p>
 
 <div id="user-content-toc">
