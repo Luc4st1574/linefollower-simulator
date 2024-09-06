@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
 import matplotlib.pyplot as plt
-from src.robot import Robot, MotorController, Sensor
-from src.pid_regulator import PIDregulator
-from src.sand_box import SandBox
+from robot import Robot, MotorController, Sensor
+from pid_regulator import PIDregulator
+from sand_box import SandBox
 
 class ControlPanel(tk.Tk):
     def __init__(self):

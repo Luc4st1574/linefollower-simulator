@@ -10,7 +10,7 @@ class PIDregulator:
         self.speed = 0.0
         self.dt = 20  # Default to 50Hz
         self.last_error = 0.0
-        self.sumLinePositions = 0.0
+        self.sum_line_positions = 0.0
         
         # Store motor controller and sensor
         self.motor_ctrl = motor_ctrl
@@ -40,9 +40,9 @@ class PIDregulator:
             else:
                 # Calculate PID control
                 error = 0.0 - position
-                self.sumLinePositions += (error - self.last_error) * self.dt / 1000  # Convert dt to seconds
+                self.sum_line_positions += (error - self.last_error) * self.dt / 1000  # Convert dt to seconds
                 
-                u = self.p * error + self.i * self.sumLinePositions + self.d * (error - self.last_error) / (self.dt / 1000)
+                u = self.p * error + self.i * self.sum_line_positions + self.d * (error - self.last_error) / (self.dt / 1000)
                 u = u * self.speed
                 self.last_error = error
                 
