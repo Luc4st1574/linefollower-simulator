@@ -76,7 +76,7 @@ Download the `Release` called `main.exe` from [Github](https://github.com/Luc4st
 Just clone the repo `LineFollowerRobot` from `github` and run the main.py file:
 
 ```shell
-git clone https://github.com/Luc4st1574/LineFollowerRobot
+git clone https://github.com/Luc4st1574/linefollower-simulator
 ```
 
 # Requirements
