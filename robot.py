@@ -86,7 +86,7 @@ class Robot:
         self.ax.fill(x, y, edgecolor='black', fill=False)
         x_min, x_max = min(x), max(x)
         y_min, y_max = min(y), max(y)
-        padding = 0.1
+        padding = 0.2  # Increased padding
         x_range = x_max - x_min
         y_range = y_max - y_min
         self.ax.set_xlim(x_min - padding * x_range, x_max + padding * x_range)
@@ -131,10 +131,9 @@ class Robot:
             self.sensor.update_position(self)
             line_position = self.sensor.get_line_position(self.path_drawer.get_path_line())
             
-            # Use the line_position to adjust the robot's movement
-            if abs(line_position) > 0.8:  # If the line is near the edge of the sensor
+            if abs(line_position) > 0.8:
                 turn_factor = 0.2 * np.sign(line_position)
-                self.angle += turn_factor  # Adjust the angle to turn towards the line
+                self.angle += turn_factor
             
             self.update_robot()
             return self.robot_patch, self.sensor_line
@@ -156,7 +155,23 @@ class Robot:
             self.sensor.update_position(self)
             sensor_coords = np.array(self.sensor.sensor_line.coords)
             self.sensor_line.set_data(sensor_coords[:, 0], sensor_coords[:, 1])
-            self.fig.canvas.draw_idle()
+            
+            # Check if robot is out of bounds and adjust plot limits if necessary
+            x_min, x_max = self.ax.get_xlim()
+            y_min, y_max = self.ax.get_ylim()
+            padding = 0.1
+            
+            if self.x < x_min + padding:
+                self.ax.set_xlim(self.x - padding, x_max + (x_min - self.x + padding))
+            elif self.x > x_max - padding:
+                self.ax.set_xlim(x_min - (self.x - x_max + padding), self.x + padding)
+            
+            if self.y < y_min + padding:
+                self.ax.set_ylim(self.y - padding, y_max + (y_min - self.y + padding))
+            elif self.y > y_max - padding:
+                self.ax.set_ylim(y_min - (self.y - y_max + padding), self.y + padding)
+            
+            self.fig.canvas.draw()
             self.fig.canvas.flush_events()
 
     def set_speed(self, speed):
