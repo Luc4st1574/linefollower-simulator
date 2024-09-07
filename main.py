@@ -1,20 +1,20 @@
 import tkinter as tk
 from tkinter import ttk
 import matplotlib.pyplot as plt
-from robot import Robot, MotorController, Sensor
-from pid_regulator import PIDregulator
-from sand_box import SandBox
+from robot import Robot, Sensor, PIDregulator, SandBox
+from path import PathDrawer
 
 class ControlPanel(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Line Follower Robot Simulator")
 
-        # Initialize robot components
-        self.motor_ctrl = MotorController()
+        # Initialize components
         self.sensor = Sensor()
         self.robot = Robot(self.sensor)
-        self.pid = PIDregulator(self.motor_ctrl, self.sensor)
+        self.pid = PIDregulator(self.robot, self.sensor)
+        self.path_drawer = PathDrawer()
+        self.sandbox = SandBox(self.robot, self.pid, self.path_drawer)
         
         # Set up the main canvas
         self.canvas_width = 800
@@ -26,8 +26,7 @@ class ControlPanel(tk.Tk):
         controls_frame = tk.Frame(self)
         controls_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
 
-        # Initialize the sandbox and draw the initial shape
-        self.sandbox = SandBox(self.robot, self.pid)
+        # Draw the initial shape
         self.sandbox.draw_shape(self.robot_canvas)
 
         # Set up PID controller frame
@@ -73,13 +72,11 @@ class ControlPanel(tk.Tk):
         self.pid.start()
 
     def _create_pid_slider(self, parent, label, row, command, from_=0.0, to=10.0):
-        """Helper method to create PID control sliders"""
         ttk.Label(parent, text=label).grid(row=row, column=0, sticky="e")
         slider = ttk.Scale(parent, from_=from_, to=to, orient=tk.HORIZONTAL, command=command)
         slider.grid(row=row, column=1, sticky="ew")
 
     def _create_geometry_slider(self, parent, label, row, command, from_, to, initial):
-        """Helper method to create geometry control sliders"""
         ttk.Label(parent, text=label).grid(row=row, column=0, sticky="e")
         slider = ttk.Scale(parent, from_=from_, to=to, orient=tk.HORIZONTAL, command=command)
         slider.set(initial)
@@ -87,38 +84,31 @@ class ControlPanel(tk.Tk):
         setattr(self, f"{label.lower().replace(':', '_')}_slider", slider)
 
     def update_wheel_gauge(self, value):
-        """Update the wheel gauge of the robot"""
         self.robot.set_wheel_gauge(float(value))
         self.sandbox.update_robot()
 
     def set_speed(self, speed):
-        """Set the speed for both the sandbox and PID regulator"""
         speed_value = float(speed)
         self.sandbox.set_speed(speed_value)
         self.pid.set_speed(speed_value)
 
     def set_acceleration(self, acceleration):
-        """Set the acceleration of the robot"""
         accel_value = float(acceleration)
         self.robot.set_acceleration(accel_value)
 
     def reset_position(self):
-        """Reset the position of the robot in both sandbox and robot object"""
         self.sandbox.reset_position()
         self.robot.reset_position()
 
     def update_sensor_position(self, value):
-        """Update the sensor position on the robot"""
         self.sensor.set_sensor_position(float(value))
         self.sandbox.update_robot()
 
     def update_sensor_width(self, value):
-        """Update the sensor width on the robot"""
         self.sensor.set_sensor_width(float(value))
         self.sandbox.update_robot()
 
     def on_closing(self):
-        """Handle the closing of the application window"""
         self.sandbox.on_close()
         self.pid.stop()
         plt.close('all')
