@@ -67,7 +67,7 @@
 
 Download the `Release` called `main.exe` from [Github](https://github.com/Luc4st1574/LineFollowerRobot/releases)
 
--- OR --
+--------------------------------------------- OR ---------------------------------------------
 
 
 Just clone the repo `LineFollowerRobot` from `github` and run the main.py file:
