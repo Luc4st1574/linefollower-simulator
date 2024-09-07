@@ -1,16 +1,16 @@
-import math
-import threading
-import time
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.patches import Rectangle
 from matplotlib.transforms import Affine2D
 from matplotlib.animation import FuncAnimation
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from shapely.geometry import LineString, Point
+import math
+import threading
+import time
 
 class Robot:
-    def __init__(self, sensor):
+    def __init__(self, sensor, path_drawer):
         self.x = 0.0
         self.y = 0.0
         self.angle = 0.0
@@ -23,6 +23,17 @@ class Robot:
         self.sensor = sensor
         self.left_speed = 0
         self.right_speed = 0
+        self.path_drawer = path_drawer
+        self.path_index = 0
+        self.fig = None
+        self.ax = None
+        self.robot_patch = None
+        self.sensor_line = None
+        self.canvas_agg = None
+        self.ani = None
+        self.target_speed = 1.0
+        self.initial_position = self.path_drawer.get_path()[0]
+        self.animation_running = False
 
     def set_wheel_gauge(self, gauge):
         self.wheel_gauge = max(0.01, min(0.2, gauge))
@@ -37,11 +48,15 @@ class Robot:
             observer.update_robot()
 
     def reset_position(self):
-        self.x = 0.0
-        self.y = 0.0
-        self.angle = 0.0
+        self.x, self.y = self.initial_position
+        next_position = self.path_drawer.get_path()[1]
+        dx = next_position[0] - self.initial_position[0]
+        dy = next_position[1] - self.initial_position[1]
+        self.angle = np.arctan2(dy, dx)
         self.current_speed = 0.0
+        self.path_index = 0
         self.notify_observers()
+        print("Robot position reset")
 
     def update_position(self, x, y, angle):
         self.x = x
@@ -63,6 +78,99 @@ class Robot:
     def set_motor_speeds(self, left, right):
         self.left_speed = left
         self.right_speed = right
+
+    def draw_shape(self, canvas):
+        x, y = zip(*self.path_drawer.get_path())
+        self.fig, self.ax = plt.subplots(figsize=(8, 8))
+        self.ax.plot(x, y, 'k-', linewidth=2)
+        self.ax.fill(x, y, edgecolor='black', fill=False)
+        x_min, x_max = min(x), max(x)
+        y_min, y_max = min(y), max(y)
+        padding = 0.1
+        x_range = x_max - x_min
+        y_range = y_max - y_min
+        self.ax.set_xlim(x_min - padding * x_range, x_max + padding * x_range)
+        self.ax.set_ylim(y_min - padding * y_range, y_max + padding * y_range)
+        self.ax.set_aspect('equal', adjustable='box')
+        self.ax.axis('off')
+        self.x, self.y = self.initial_position
+        next_position = self.path_drawer.get_path()[1]
+        dx = next_position[0] - self.initial_position[0]
+        dy = next_position[1] - self.initial_position[1]
+        self.angle = np.arctan2(dy, dx)
+        self.robot_patch = Rectangle(
+            (0, -self.height / 2),
+            self.width,
+            self.height,
+            color="red",
+            zorder=10
+        )
+        self.ax.add_patch(self.robot_patch)
+        sensor_x = [-self.sensor.width / 2, self.sensor.width / 2]
+        sensor_y = [self.sensor.distance, self.sensor.distance]
+        self.sensor_line, = self.ax.plot(sensor_x, sensor_y, 'b-', linewidth=2, zorder=11)
+        self.update_robot()
+        self.canvas_agg = FigureCanvasTkAgg(self.fig, master=canvas)
+        self.canvas_agg.draw()
+        self.canvas_agg.get_tk_widget().pack(side="top", fill="both", expand=True)
+        self.start_animation()
+
+    def start_animation(self):
+        def update(frame):
+            if not self.animation_running:
+                return self.robot_patch, self.sensor_line
+            current_speed = self.update_speed(self.target_speed)
+            self.path_index = (self.path_index + current_speed) % len(self.path_drawer.get_path())
+            new_position = self.path_drawer.get_path()[int(self.path_index)]
+            self.x, self.y = new_position
+            next_index = (int(self.path_index) + 1) % len(self.path_drawer.get_path())
+            next_position = self.path_drawer.get_path()[next_index]
+            dx = next_position[0] - new_position[0]
+            dy = next_position[1] - new_position[1]
+            self.angle = np.arctan2(dy, dx) + np.pi/2
+            self.sensor.update_position(self)
+            line_position = self.sensor.get_line_position(self.path_drawer.get_path_line())
+            
+            # Use the line_position to adjust the robot's movement
+            if abs(line_position) > 0.8:  # If the line is near the edge of the sensor
+                turn_factor = 0.2 * np.sign(line_position)
+                self.angle += turn_factor  # Adjust the angle to turn towards the line
+            
+            self.update_robot()
+            return self.robot_patch, self.sensor_line
+
+        self.animation_running = True
+        self.ani = FuncAnimation(
+            self.fig, update, frames=None, interval=50, blit=True, repeat=True,
+            cache_frame_data=False
+        )
+        self.canvas_agg.draw()
+
+    def update_robot(self):
+        if self.robot_patch and self.sensor_line:
+            self.robot_patch.set_width(self.width)
+            self.robot_patch.set_height(self.height)
+            robot_t = Affine2D().rotate(self.angle).translate(self.x, self.y)
+            self.robot_patch.set_transform(robot_t + self.ax.transData)
+            self.robot_patch.set_xy((-self.width / 2, -self.height / 2))
+            self.sensor.update_position(self)
+            sensor_coords = np.array(self.sensor.sensor_line.coords)
+            self.sensor_line.set_data(sensor_coords[:, 0], sensor_coords[:, 1])
+            self.fig.canvas.draw_idle()
+            self.fig.canvas.flush_events()
+
+    def set_speed(self, speed):
+        self.target_speed = speed / 100.0
+        print(f"Target speed set to {self.target_speed}")
+
+    def on_close(self):
+        self.animation_running = False
+        if self.ani is not None:
+            self.ani.event_source.stop()
+            self.ani = None
+        if self.fig is not None:
+            plt.close(self.fig)
+            self.fig = None
 
 class Sensor:
     def __init__(self):
@@ -109,6 +217,19 @@ class Sensor:
             return Point(intersections.coords[0])
         else:
             return min(intersections.geoms, key=lambda p: Point(p).distance(Point(self.sensor_line.coords[0])))
+
+    def get_line_position(self, path):
+        intersection = self.find_closest_intersection(path)
+        if intersection:
+            sensor_start = Point(self.sensor_line.coords[0])
+            sensor_end = Point(self.sensor_line.coords[-1])
+            sensor_length = sensor_start.distance(sensor_end)
+            position = sensor_start.distance(intersection) / sensor_length
+            normalized_position = (position * 2) - 1  # Convert to range [-1, 1]
+            self.last_seen = normalized_position
+            return normalized_position
+        else:
+            return self.last_seen  # Return the last known position if no intersection is found
 
 class PIDregulator:
     def __init__(self, robot, sensor):
@@ -178,120 +299,3 @@ class PIDregulator:
     def set_speed(self, speed):
         self.speed = speed
         print("Speed:", self.speed)
-
-class SandBox:
-    def __init__(self, robot, pid_regulator, path_drawer):
-        self.robot = robot
-        self.pid_regulator = pid_regulator
-        self.path_drawer = path_drawer
-        self.path_index = 0
-        self.fig = None
-        self.ax = None
-        self.robot_patch = None
-        self.sensor_line = None
-        self.canvas_agg = None
-        self.ani = None
-        self.target_speed = 1.0
-        self.initial_position = self.path_drawer.get_path()[0]
-        self.animation_running = False
-
-    def draw_shape(self, canvas):
-        x, y = zip(*self.path_drawer.get_path())
-        self.fig, self.ax = plt.subplots(figsize=(8, 8))
-        self.ax.plot(x, y, 'k-', linewidth=2)
-        self.ax.fill(x, y, edgecolor='black', fill=False)
-        x_min, x_max = min(x), max(x)
-        y_min, y_max = min(y), max(y)
-        padding = 0.1
-        x_range = x_max - x_min
-        y_range = y_max - y_min
-        self.ax.set_xlim(x_min - padding * x_range, x_max + padding * x_range)
-        self.ax.set_ylim(y_min - padding * y_range, y_max + padding * y_range)
-        self.ax.set_aspect('equal', adjustable='box')
-        self.ax.axis('off')
-        self.robot.x, self.robot.y = self.initial_position
-        next_position = self.path_drawer.get_path()[1]
-        dx = next_position[0] - self.initial_position[0]
-        dy = next_position[1] - self.initial_position[1]
-        self.robot.angle = np.arctan2(dy, dx)
-        self.robot_patch = Rectangle(
-            (0, -self.robot.height / 2),
-            self.robot.width,
-            self.robot.height,
-            color="red",
-            zorder=10
-        )
-        self.ax.add_patch(self.robot_patch)
-        sensor_x = [-self.robot.sensor.width / 2, self.robot.sensor.width / 2]
-        sensor_y = [self.robot.sensor.distance, self.robot.sensor.distance]
-        self.sensor_line, = self.ax.plot(sensor_x, sensor_y, 'b-', linewidth=2, zorder=11)
-        self.update_robot()
-        self.canvas_agg = FigureCanvasTkAgg(self.fig, master=canvas)
-        self.canvas_agg.draw()
-        self.canvas_agg.get_tk_widget().pack(side="top", fill="both", expand=True)
-        self.start_animation()
-
-    def start_animation(self):
-        def update(frame):
-            if not self.animation_running:
-                return self.robot_patch, self.sensor_line
-            current_speed = self.robot.update_speed(self.target_speed)
-            self.path_index = (self.path_index + current_speed) % len(self.path_drawer.get_path())
-            new_position = self.path_drawer.get_path()[int(self.path_index)]
-            self.robot.x, self.robot.y = new_position
-            next_index = (int(self.path_index) + 1) % len(self.path_drawer.get_path())
-            next_position = self.path_drawer.get_path()[next_index]
-            dx = next_position[0] - new_position[0]
-            dy = next_position[1] - new_position[1]
-            self.robot.angle = np.arctan2(dy, dx) + np.pi/2
-            self.robot.sensor.update_position(self.robot)
-            line_position = self.robot.sensor.find_closest_intersection(self.path_drawer.get_path_line())
-            if line_position:
-                normalized_position = (line_position.x - self.robot.x) / (self.robot.sensor.width / 2)
-                self.pid_regulator.sensor.last_seen = normalized_position
-            self.update_robot()
-            return self.robot_patch, self.sensor_line
-
-        self.animation_running = True
-        self.ani = FuncAnimation(
-            self.fig, update, frames=None, interval=50, blit=True, repeat=True,
-            cache_frame_data=False
-        )
-        self.canvas_agg.draw()
-
-    def update_robot(self):
-        if self.robot_patch and self.sensor_line:
-            self.robot_patch.set_width(self.robot.width)
-            self.robot_patch.set_height(self.robot.height)
-            robot_t = Affine2D().rotate(self.robot.angle).translate(self.robot.x, self.robot.y)
-            self.robot_patch.set_transform(robot_t + self.ax.transData)
-            self.robot_patch.set_xy((-self.robot.width / 2, -self.robot.height / 2))
-            self.robot.sensor.update_position(self.robot)
-            sensor_coords = np.array(self.robot.sensor.sensor_line.coords)
-            self.sensor_line.set_data(sensor_coords[:, 0], sensor_coords[:, 1])
-            self.fig.canvas.draw_idle()
-            self.fig.canvas.flush_events()
-
-    def set_speed(self, speed):
-        self.target_speed = speed / 100.0
-        print(f"Target speed set to {self.target_speed}")
-
-    def reset_position(self):
-        self.path_index = 0
-        self.robot.x, self.robot.y = self.initial_position
-        next_position = self.path_drawer.get_path()[1]
-        dx = next_position[0] - self.initial_position[0]
-        dy = next_position[1] - self.initial_position[1]
-        self.robot.angle = np.arctan2(dy, dx)
-        self.robot.current_speed = 0.0
-        self.update_robot()
-        print("Robot position reset")
-
-    def on_close(self):
-        self.animation_running = False
-        if self.ani is not None:
-            self.ani.event_source.stop()
-            self.ani = None
-        if self.fig is not None:
-            plt.close(self.fig)
-            self.fig = None
