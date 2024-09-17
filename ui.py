@@ -30,11 +30,11 @@ class ControlPanel(tk.Tk):
         pid_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
         # Create sliders for PID parameters
-        self._create_pid_slider(pid_frame, "P:", 0, self.pid.set_p)
-        self._create_pid_slider(pid_frame, "I:", 1, self.pid.set_i)
-        self._create_pid_slider(pid_frame, "D:", 2, self.pid.set_d)
-        self._create_pid_slider(pid_frame, "Speed:", 3, self.set_speed, to=200.0)
-        self._create_pid_slider(pid_frame, "Frequency:", 4, lambda f: self.pid.set_frecuency(int(float(f))), to=50)
+        self._create_pid_slider(pid_frame, "P:", 0, self.pid.set_p, initial=2.0)
+        self._create_pid_slider(pid_frame, "I:", 1, self.pid.set_i, initial=2.0)
+        self._create_pid_slider(pid_frame, "D:", 2, self.pid.set_d, initial=3.0)
+        self._create_pid_slider(pid_frame, "Speed:", 3, self.set_speed, to=200.0, initial=50.0)
+        self._create_pid_slider(pid_frame, "Frequency:", 4, lambda f: self.pid.set_frecuency(int(float(f))), to=50, initial=20)
 
         # Set up robot geometry frame
         robot_frame = ttk.LabelFrame(controls_frame, text="Geometry", padding=(10, 10))
@@ -64,9 +64,10 @@ class ControlPanel(tk.Tk):
         # Set up closing protocol
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-    def _create_pid_slider(self, parent, label, row, command, from_=0.0, to=10.0):
+    def _create_pid_slider(self, parent, label, row, command, from_=0.0, to=10.0, initial=0.0):
         ttk.Label(parent, text=label).grid(row=row, column=0, sticky="e")
         slider = ttk.Scale(parent, from_=from_, to=to, orient=tk.HORIZONTAL, command=command)
+        slider.set(initial)
         slider.grid(row=row, column=1, sticky="ew")
 
     def _create_geometry_slider(self, parent, label, row, command, from_, to, initial):

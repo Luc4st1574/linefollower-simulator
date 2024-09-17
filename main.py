@@ -15,6 +15,9 @@ def main():
     # Start the PID regulator
     pid.start()
     
+    # Start the robot's animation
+    robot.start_animation()
+    
     # Run the main event loop
     app.mainloop()
 
