@@ -33,7 +33,7 @@ class ControlPanel(tk.Tk):
         self._create_pid_slider(pid_frame, "P:", 0, self.pid.set_p, initial=2.0)
         self._create_pid_slider(pid_frame, "I:", 1, self.pid.set_i, initial=2.0)
         self._create_pid_slider(pid_frame, "D:", 2, self.pid.set_d, initial=3.0)
-        self._create_pid_slider(pid_frame, "Speed:", 3, self.set_speed, to=200.0, initial=50.0)
+        self._create_pid_slider(pid_frame, "Speed:", 3, self.set_speed, to=500.0, initial=50.0)
         self._create_pid_slider(pid_frame, "Frequency:", 4, lambda f: self.pid.set_frecuency(int(float(f))), to=50, initial=20)
 
         # Set up robot geometry frame

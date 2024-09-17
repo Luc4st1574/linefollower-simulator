@@ -21,6 +21,8 @@ class Robot:
         self.acceleration = 0.1
         self.current_speed = 0.0
         self.sensor = sensor
+        self.left_speed = 0
+        self.right_speed = 0
         self.path_drawer = path_drawer
         self.path_index = 0
         self.fig = None
@@ -32,13 +34,6 @@ class Robot:
         self.target_speed = 1.0
         self.initial_position = self.path_drawer.get_path()[0]
         self.animation_running = False
-        self.left_speed = 0
-        self.right_speed = 0
-        self.pid_adjustment = 0
-        self.target_x = 0
-        self.target_y = 0
-        self.target_angle = 0
-        self.smoothing_factor = 0.1
 
     def set_wheel_gauge(self, gauge):
         self.wheel_gauge = max(0.01, min(0.2, gauge))
@@ -124,30 +119,28 @@ class Robot:
         def update(frame):
             if not self.animation_running:
                 return self.robot_patch, self.sensor_line
-
             current_speed = self.update_speed(self.target_speed)
             self.path_index = (self.path_index + current_speed) % len(self.path_drawer.get_path())
             new_position = self.path_drawer.get_path()[int(self.path_index)]
-            self.target_x, self.target_y = new_position
+            self.x, self.y = new_position
             next_index = (int(self.path_index) + 1) % len(self.path_drawer.get_path())
             next_position = self.path_drawer.get_path()[next_index]
             dx = next_position[0] - new_position[0]
             dy = next_position[1] - new_position[1]
-            self.target_angle = np.arctan2(dy, dx) + np.pi/2 + self.pid_adjustment * 0.01
-
-            # Smooth movement towards target position and angle
-            self.x += (self.target_x - self.x) * self.smoothing_factor
-            self.y += (self.target_y - self.y) * self.smoothing_factor
-            angle_diff = (self.target_angle - self.angle + np.pi) % (2 * np.pi) - np.pi
-            self.angle += angle_diff * self.smoothing_factor
-
+            self.angle = np.arctan2(dy, dx) + np.pi/2
             self.sensor.update_position(self)
+            line_position = self.sensor.get_line_position(self.path_drawer.get_path_line())
+            
+            if abs(line_position) > 0.8:
+                turn_factor = 0.2 * np.sign(line_position)
+                self.angle += turn_factor
+            
             self.update_robot()
             return self.robot_patch, self.sensor_line
 
         self.animation_running = True
         self.ani = FuncAnimation(
-            self.fig, update, frames=None, interval=20, blit=True, repeat=True,
+            self.fig, update, frames=None, interval=50, blit=True, repeat=True,
             cache_frame_data=False
         )
         self.canvas_agg.draw()
@@ -184,9 +177,6 @@ class Robot:
     def set_speed(self, speed):
         self.target_speed = speed / 100.0
         print(f"Target speed set to {self.target_speed}")
-        
-    def set_pid_adjustment(self, adjustment):
-        self.pid_adjustment = adjustment
 
     def on_close(self):
         self.animation_running = False
@@ -258,11 +248,11 @@ class Sensor:
 
 class PIDregulator:
     def __init__(self, robot, sensor):
-        self.p = 0.1
-        self.i = 0.01
-        self.d = 0.05
-        self.speed = 1.0
-        self.dt = 50
+        self.p = 0.0
+        self.i = 0.0
+        self.d = 0.0
+        self.speed = 0.0
+        self.dt = 20
         self.last_error = 0.0
         self.sum_line_positions = 0.0
         self.robot = robot
@@ -270,43 +260,34 @@ class PIDregulator:
         self.running = False
         self.thread = None
 
-    def run(self):
-        while self.running:
-            position = self.sensor.get_line_position(self.robot.path_drawer.get_path_line())
-            error = 0.0 - position
-            self.sum_line_positions += error * self.dt / 1000
-            
-            u = self.p * error + self.i * self.sum_line_positions + self.d * (error - self.last_error) / (self.dt / 1000)
-            u = u * self.speed
-            
-            self.last_error = error
-            
-            # Set the PID adjustment to the robot
-            self.robot.set_pid_adjustment(u)
-            
-            time.sleep(self.dt / 1000)
-
     def set_frecuency(self, freq):
         freq = max(1, min(int(freq), 50))
         self.dt = 1000 / freq
         print("Frequency:", freq)
 
-    def set_p(self, p):
-        self.p = float(p)
-        print("P:", self.p)
+    def run(self):
+        while self.running:
+            position = self.sensor.last_seen
+            if abs(position) > 1:
+                if position < 0:
+                    self.robot.set_motor_speeds(0, self.speed)
+                else:
+                    self.robot.set_motor_speeds(self.speed, 0)
+            else:
+                error = 0.0 - position
+                self.sum_line_positions += (error - self.last_error) * self.dt / 1000
+                u = self.p * error + self.i * self.sum_line_positions + self.d * (error - self.last_error) / (self.dt / 1000)
+                u = u * self.speed
+                self.last_error = error
+                if u < 0:
+                    vl = max(self.speed + u, 0)
+                    vr = self.speed
+                else:
+                    vl = self.speed
+                    vr = max(self.speed - u, 0)
+                self.robot.set_motor_speeds(vl, vr)
+            time.sleep(max(self.dt / 1000, 0.05))  # Ensure a minimum sleep time of 50ms
 
-    def set_i(self, i):
-        self.i = float(i)
-        print("I:", self.i)
-
-    def set_d(self, d):
-        self.d = float(d)
-        print("D:", self.d)
-
-    def set_speed(self, speed):
-        self.speed = float(speed) / 100.0  # Convert to 0-1 range
-        print("Speed:", self.speed)
-        
     def start(self):
         if not self.running:
             self.running = True
@@ -317,3 +298,19 @@ class PIDregulator:
         self.running = False
         if self.thread:
             self.thread.join()
+
+    def set_p(self, p):
+        self.p = p
+        print("P:", self.p)
+
+    def set_i(self, i):
+        self.i = i
+        print("I:", self.i)
+
+    def set_d(self, d):
+        self.d = d
+        print("D:", self.d)
+
+    def set_speed(self, speed):
+        self.speed = speed
+        print("Speed:", self.speed)
