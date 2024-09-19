@@ -97,7 +97,6 @@ class Robot:
         self.notify_observers()
 
     def update_robot(self):
-        """Updates the robot's visual representation and sensor."""
         if self.robot_patch and self.sensor_line:
             self.robot_patch.set_width(self.width)
             self.robot_patch.set_height(self.height)
@@ -108,7 +107,7 @@ class Robot:
             sensor_coords = np.array(self.sensor.sensor_line.coords)
             self.sensor_line.set_data(sensor_coords[:, 0], sensor_coords[:, 1])
             self.check_bounds()
-            self.fig.canvas.draw()
+            self.fig.canvas.draw_idle()  # Use draw_idle instead of draw
             self.fig.canvas.flush_events()
 
     def check_bounds(self):
@@ -175,7 +174,6 @@ class Robot:
         self.ax.set_ylim(y_min - padding * y_range, y_max + padding * y_range)
 
     def start_animation(self):
-        """Starts the robot's movement animation."""
         def update(frame):
             if not self.animation_running:
                 return self.robot_patch, self.sensor_line
@@ -341,35 +339,31 @@ class PIDregulator:
         print("Frequency:", freq)
 
     def run(self):
-        """Main loop for the PID controller. Adjusts motor speeds based on sensor input."""
         while self.running:
-            position = self.sensor.last_seen  # Get the last detected position from the sensor.
+            position = self.sensor.last_seen
 
             if abs(position) > 1:
-                # If the robot is far off the path, stop one motor to turn.
                 if position < 0:
-                    self.robot.set_motor_speeds(0, self.speed)  # Turn left.
+                    self.robot.set_motor_speeds(0, self.speed)
                 else:
-                    self.robot.set_motor_speeds(self.speed, 0)  # Turn right.
+                    self.robot.set_motor_speeds(self.speed, 0)
             else:
-                # PID control: Calculate error and adjust motor speeds.
                 error = 0.0 - position
-                self.sum_line_positions += (error - self.last_error) * self.dt / 1000  # Update integral term.
+                self.sum_line_positions += (error - self.last_error) * self.dt / 1000
                 u = self.p * error + self.i * self.sum_line_positions + self.d * (error - self.last_error) / (self.dt / 1000)
-                u *= self.speed  # Apply the correction factor.
-                self.last_error = error  # Store the current error for the next cycle.
+                u *= self.speed
+                self.last_error = error
 
-                # Adjust motor speeds based on the PID output.
                 if u < 0:
-                    vl = max(self.speed + u, 0)  # Left motor speed.
-                    vr = self.speed  # Right motor speed.
+                    vl = max(self.speed + u, 0)
+                    vr = self.speed
                 else:
                     vl = self.speed
                     vr = max(self.speed - u, 0)
 
-                self.robot.set_motor_speeds(vl, vr)  # Update motor speeds.
+                self.robot.set_motor_speeds(vl, vr)
 
-            time.sleep(max(self.dt / 1000, 0.05))  # Ensure a minimum sleep time of 50ms.
+            time.sleep(max(self.dt / 1000, 0.05))  # Ensure a minimum sleep time
 
     def start(self):
         """Starts the PID control loop in a separate thread."""
