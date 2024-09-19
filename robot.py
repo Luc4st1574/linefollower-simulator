@@ -35,6 +35,8 @@ class Robot:
         self.target_speed = 1.0
         self.initial_position = self.path_drawer.get_path()[0]
         self.animation_running = False
+        self.background = None
+        self.initial_robot = None
 
     # === Setup methods ===
     def set_wheel_gauge(self, gauge):
@@ -63,6 +65,18 @@ class Robot:
         self.path_index = 0
         self.notify_observers()
         print("Robot position reset")
+
+        # Update the robot patch position
+        robot_t = Affine2D().rotate(self.angle).translate(self.x, self.y)
+        self.robot_patch.set_transform(robot_t + self.ax.transData)
+
+        # Update sensor position
+        self.sensor.update_position(self)
+        sensor_coords = np.array(self.sensor.sensor_line.coords)
+        self.sensor_line.set_data(sensor_coords[:, 0], sensor_coords[:, 1])
+
+        # Redraw the canvas
+        self.fig.canvas.draw()
 
     # === Control methods ===
     def set_acceleration(self, acceleration):
@@ -130,7 +144,7 @@ class Robot:
     def draw_shape(self, canvas):
         """Initializes the robot's drawing and starts the animation."""
         x, y = zip(*self.path_drawer.get_path())
-        self.fig, self.ax = plt.subplots(figsize=(8, 8))
+        self.fig, self.ax = plt.subplots(figsize=(9, 9))
         self.ax.plot(x, y, 'k-', linewidth=2)
         self.ax.fill(x, y, edgecolor='black', fill=False)
         self.set_limits(x, y)
@@ -159,6 +173,14 @@ class Robot:
         self.canvas_agg = FigureCanvasTkAgg(self.fig, master=canvas)
         self.canvas_agg.draw()
         self.canvas_agg.get_tk_widget().pack(side="top", fill="both", expand=True)
+
+        # Cache the background without the initial robot
+        self.robot_patch.set_visible(False)
+        self.sensor_line.set_visible(False)
+        self.fig.canvas.draw()
+        self.background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
+        self.robot_patch.set_visible(True)
+        self.sensor_line.set_visible(True)
 
         # Start the animation loop
         self.start_animation()
@@ -198,11 +220,29 @@ class Robot:
                 turn_factor = 0.2 * np.sign(line_position)
                 self.angle += turn_factor
 
-            self.update_robot()
+            # Restore the background
+            self.fig.canvas.restore_region(self.background)
+
+            # Update robot position and orientation
+            robot_t = Affine2D().rotate(self.angle).translate(self.x, self.y)
+            self.robot_patch.set_transform(robot_t + self.ax.transData)
+
+            # Update sensor position
+            sensor_coords = np.array(self.sensor.sensor_line.coords)
+            self.sensor_line.set_data(sensor_coords[:, 0], sensor_coords[:, 1])
+
+            # Redraw only the robot and sensor
+            self.ax.draw_artist(self.robot_patch)
+            self.ax.draw_artist(self.sensor_line)
+
+            # Update the display
+            self.fig.canvas.blit(self.ax.bbox)
+            self.fig.canvas.flush_events()
+
             return self.robot_patch, self.sensor_line
 
         self.animation_running = True
-        self.ani = FuncAnimation(self.fig, update, frames=None, interval=50, blit=True, repeat=True, cache_frame_data=False)
+        self.ani = FuncAnimation(self.fig, update, frames=None, interval=50, blit=False, repeat=True, cache_frame_data=False)
         self.canvas_agg.draw()
 
     def on_close(self):
