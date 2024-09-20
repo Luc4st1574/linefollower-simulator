@@ -1,4 +1,6 @@
-from robot import Robot, Sensor, PIDregulator
+from robot import Robot
+from sensor import Sensor
+from pid_regulator import PidRegulator
 from path import PathDrawer
 from ui import create_control_panel
 
@@ -7,7 +9,7 @@ def main():
     path_drawer = PathDrawer()
     sensor = Sensor()
     robot = Robot(sensor, path_drawer)
-    pid = PIDregulator(robot, sensor)
+    pid = PidRegulator(robot, sensor)
 
     # Create and run the control panel
     app = create_control_panel(robot, sensor, pid, path_drawer)
