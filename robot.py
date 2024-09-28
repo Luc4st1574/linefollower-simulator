@@ -141,7 +141,7 @@ class Robot:
     def draw_shape(self, canvas):
         """Initializes the robot's drawing and starts the animation."""
         x, y = zip(*self.path_drawer.get_path())
-        self.fig, self.ax = plt.subplots(figsize=(9, 9))
+        self.fig, self.ax = plt.subplots(figsize=(8, 8))
         self.ax.plot(x, y, 'k-', linewidth=2)
         self.ax.fill(x, y, edgecolor='black', fill=False)
         self.set_limits(x, y)
