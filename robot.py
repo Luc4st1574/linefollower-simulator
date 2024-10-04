@@ -197,51 +197,49 @@ class Robot:
             if not self.animation_running:
                 return self.robot_patch, self.sensor_line
 
-            # Update speed and position
+            # Update speed and position only if needed
             current_speed = self.update_speed(self.target_speed)
-            self.path_index = (self.path_index + current_speed) % len(self.path_drawer.get_path())
-            new_position = self.path_drawer.get_path()[int(self.path_index)]
-            self.x, self.y = new_position
+            if current_speed > 0:
+                # Update robot's path position
+                path_len = len(self.path_drawer.get_path())
+                self.path_index = (self.path_index + current_speed) % path_len
+                new_position = self.path_drawer.get_path()[int(self.path_index)]
+                self.x, self.y = new_position
 
-            # Calculate new angle
-            next_index = (int(self.path_index) + 1) % len(self.path_drawer.get_path())
-            next_position = self.path_drawer.get_path()[next_index]
-            dx = next_position[0] - new_position[0]
-            dy = next_position[1] - new_position[1]
-            self.angle = np.arctan2(dy, dx) + np.pi / 2
+                # Update angle for smooth movement
+                next_index = (int(self.path_index) + 1) % path_len
+                next_position = self.path_drawer.get_path()[next_index]
+                dx = next_position[0] - new_position[0]
+                dy = next_position[1] - new_position[1]
+                self.angle = np.arctan2(dy, dx) + np.pi / 2
 
-            # Update sensor and steering
-            self.sensor.update_position(self)
-            line_position = self.sensor.get_line_position(self.path_drawer.get_path_line())
-            if abs(line_position) > 0.8:
-                turn_factor = 0.2 * np.sign(line_position)
-                self.angle += turn_factor
+                # Restore the background
+                self.fig.canvas.restore_region(self.background)
 
-            # Restore the background
-            self.fig.canvas.restore_region(self.background)
+                # Update robot position and orientation
+                robot_t = Affine2D().rotate(self.angle).translate(self.x, self.y)
+                self.robot_patch.set_transform(robot_t + self.ax.transData)
 
-            # Update robot position and orientation
-            robot_t = Affine2D().rotate(self.angle).translate(self.x, self.y)
-            self.robot_patch.set_transform(robot_t + self.ax.transData)
+                # Update sensor position
+                self.sensor.update_position(self)
+                sensor_coords = np.array(self.sensor.sensor_line.coords)
+                self.sensor_line.set_data(sensor_coords[:, 0], sensor_coords[:, 1])
 
-            # Update sensor position
-            sensor_coords = np.array(self.sensor.sensor_line.coords)
-            self.sensor_line.set_data(sensor_coords[:, 0], sensor_coords[:, 1])
+                # Draw only the updated patches
+                self.ax.draw_artist(self.robot_patch)
+                self.ax.draw_artist(self.sensor_line)
 
-            # Redraw only the robot and sensor
-            self.ax.draw_artist(self.robot_patch)
-            self.ax.draw_artist(self.sensor_line)
-
-            # Update the display
-            self.fig.canvas.blit(self.ax.bbox)
-            self.fig.canvas.flush_events()
+                # Redraw the canvas
+                self.fig.canvas.blit(self.ax.bbox)
+                self.fig.canvas.flush_events()
 
             return self.robot_patch, self.sensor_line
 
         self.animation_running = True
-        self.ani = FuncAnimation(self.fig, update, frames=None, interval=50, blit=False, repeat=True, cache_frame_data=False)
+        self.ani = FuncAnimation(self.fig, update, frames=None, interval=50, blit=True, repeat=True, cache_frame_data=False)
         self.canvas_agg.draw()
-
+    
+    
     def on_close(self):
         """Handles the closure of the robot animation."""
         self.animation_running = False
