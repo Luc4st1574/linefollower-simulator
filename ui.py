@@ -59,7 +59,7 @@ class ControlPanel(tk.Tk):
         self.p_slider, self.p_value_label = self._create_slider(pid_frame, "P:", 0, self.update_p, initial=2.0)
         self.i_slider, self.i_value_label = self._create_slider(pid_frame, "I:", 1, self.update_i, initial=2.0)
         self.d_slider, self.d_value_label = self._create_slider(pid_frame, "D:", 2, self.update_d, initial=3.0)
-        self.speed_slider, self.speed_value_label = self._create_slider(pid_frame, "Speed:", 3, self.update_speed, to=500.0, initial=50.0)
+        self.speed_slider, self.speed_value_label = self._create_slider(pid_frame, "Speed:", 3, self.update_speed, to=80.0, initial=20.0)
         self.freq_slider, self.freq_value_label = self._create_slider(pid_frame, "Frequency:", 4, self.update_frequency, to=50, initial=20)
 
     def _create_geometry_controls(self, parent):
@@ -76,7 +76,7 @@ class ControlPanel(tk.Tk):
         """Create acceleration slider."""
         accel_frame = ttk.LabelFrame(parent, text="Acceleration", padding=(10, 10))
         accel_frame.grid(row=3, column=0, padx=10, pady=10, sticky="nsew")
-        self.accel_slider, self.accel_value_label = self._create_slider(accel_frame, "Acceleration:", 0, self.update_acceleration, from_=1.0, to=100.0, initial=25.0)
+        self.accel_slider, self.accel_value_label = self._create_slider(accel_frame, "Acceleration:", 0, self.update_acceleration, from_=1.0, to=80.0, initial=20.0)
 
     def _create_reset_button(self, parent):
         """Create reset position button."""
