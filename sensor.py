@@ -6,15 +6,15 @@ from shapely import LineString, Point
 class Sensor:
     def __init__(self):
         #Initializes the sensor with default geometry and position
-        self.sensor_line = LineString()  # The line representing the sensor range
-        self.set_geometry(0.05, 0.03)  # Default sensor geometry (width, distance from robot)
-        self.last_seen = 1  # The last position seen on the path, default to 1
+        self.sensor_line = LineString() 
+        self.set_geometry(0.05, 0.03)
+        self.last_seen = 1
 
     def set_geometry(self, width, distance):
         #Sets the geometry of the sensor.
         self.width = width
-        self.distance = max(distance, 0.01)  # Ensure a minimum distance for the sensor
-        self.update_sensor_line()  # Update sensor line after geometry changes
+        self.distance = max(distance, 0.01)
+        self.update_sensor_line()
 
     def set_sensor_position(self, distance):
         #Sets the sensor's distance from the robot
@@ -28,9 +28,9 @@ class Sensor:
 
     def update_sensor_line(self):
         #Updates the sensor line based on current width and position.
-        x1 = -self.width / 2  # Left edge of the sensor line.
-        x2 = self.width / 2  # Right edge of the sensor line.
-        y = 0  # Sensor line is horizontal.
+        x1 = -self.width / 2  
+        x2 = self.width / 2  
+        y = 0  
         self.sensor_line = LineString([(x1, y), (x2, y)])  # Create a line representing the sensor.
 
     def update_position(self, robot):
@@ -40,8 +40,8 @@ class Sensor:
         self.update_sensor_line()  # Ensure the sensor line is up-to-date.
 
         # Calculate sensor's position relative to the robot.
-        sensor_x = 0  # Sensor is centered horizontally.
-        sensor_y = robot.height / 2 + self.distance  # Sensor is placed at the front of the robot.
+        sensor_x = 0  
+        sensor_y = robot.height / 2 + self.distance  
 
         # Apply rotation and translation to the sensor line based on the robot's position.
         t = Affine2D().rotate(robot.angle).translate(
@@ -74,10 +74,8 @@ class Sensor:
             sensor_end = Point(self.sensor_line.coords[-1])
             sensor_length = sensor_start.distance(sensor_end)
             position = sensor_start.distance(intersection) / sensor_length
-
-            # Convert the position to a range of [-1, 1].
             normalized_position = (position * 2) - 1
-            self.last_seen = normalized_position  # Update the last seen position.
+            self.last_seen = normalized_position  
             return normalized_position
         else:
             return self.last_seen  # If no intersection, return the last known position.
