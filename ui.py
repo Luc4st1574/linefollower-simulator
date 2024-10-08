@@ -97,9 +97,7 @@ class ControlPanel(tk.Tk):
         return slider, value_label
 
     def _update_slider_value(self, value, command, value_label):
-        """
-        Update the value label text and execute the command associated with the slider.
-        """
+        #Update the value label text and execute the command associated with the slider.
         value_float = float(value)
         value_label.config(text=f"{value_float:.2f}")
         command(value_float)

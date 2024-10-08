@@ -5,44 +5,38 @@ from shapely import LineString, Point
 
 class Sensor:
     def __init__(self):
-        """Initializes the sensor with default geometry and position."""
-        self.sensor_line = LineString()  # The line representing the sensor range.
-        self.set_geometry(0.05, 0.03)  # Default sensor geometry (width, distance from robot).
-        self.last_seen = 1  # The last position seen on the path, default to 1.
+        #Initializes the sensor with default geometry and position
+        self.sensor_line = LineString()  # The line representing the sensor range
+        self.set_geometry(0.05, 0.03)  # Default sensor geometry (width, distance from robot)
+        self.last_seen = 1  # The last position seen on the path, default to 1
 
     def set_geometry(self, width, distance):
-        """
-        Sets the geometry of the sensor.
-        """
+        #Sets the geometry of the sensor.
         self.width = width
-        self.distance = max(distance, 0.01)  # Ensure a minimum distance for the sensor.
-        self.update_sensor_line()  # Update sensor line after geometry changes.
+        self.distance = max(distance, 0.01)  # Ensure a minimum distance for the sensor
+        self.update_sensor_line()  # Update sensor line after geometry changes
 
     def set_sensor_position(self, distance):
-        """
-        Sets the sensor's distance from the robot.
-        """
+        #Sets the sensor's distance from the robot
         self.set_geometry(self.width, distance / 100.0)
         print("Sensor position set to", self.distance)
 
     def set_sensor_width(self, width):
-        """
-        Sets the sensor's width.
-        """
+        #Sets the sensor's width.
         self.set_geometry(width / 100.0, self.distance)
         print("Sensor width set to", self.width)
 
     def update_sensor_line(self):
-        """Updates the sensor line based on current width and position."""
+        #Updates the sensor line based on current width and position.
         x1 = -self.width / 2  # Left edge of the sensor line.
         x2 = self.width / 2  # Right edge of the sensor line.
         y = 0  # Sensor line is horizontal.
         self.sensor_line = LineString([(x1, y), (x2, y)])  # Create a line representing the sensor.
 
     def update_position(self, robot):
-        """
-        Updates the sensor's position based on the robot's position and orientation.
-        """
+
+        #Updates the sensor's position based on the robot's position and orientation.
+
         self.update_sensor_line()  # Ensure the sensor line is up-to-date.
 
         # Calculate sensor's position relative to the robot.
@@ -57,9 +51,7 @@ class Sensor:
         self.sensor_line = LineString(t.transform(self.sensor_line.coords))  # Transform the sensor line.
 
     def find_closest_intersection(self, path):
-        """
-        Finds the closest intersection between the sensor line and the path.
-        """
+        #Finds the closest intersection between the sensor line and the path
         intersections = self.sensor_line.intersection(path)
 
         if intersections.is_empty:
@@ -73,9 +65,7 @@ class Sensor:
             return min(intersections.geoms, key=lambda p: Point(p).distance(Point(self.sensor_line.coords[0])))
 
     def get_line_position(self, path):
-        """
-        Determines the sensor's position relative to the path.
-        """
+        #Determines the sensor's position relative to the path.
         intersection = self.find_closest_intersection(path)
 
         if intersection:

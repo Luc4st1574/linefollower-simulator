@@ -37,22 +37,22 @@ class Robot:
 
     # === Setup methods ===
     def set_wheel_gauge(self, gauge):
-        """Sets the wheel gauge (width of the robot)."""
+        #Sets the wheel gauge (width of the robot).
         self.wheel_gauge = max(0.01, min(0.2, gauge))
         self.width = self.wheel_gauge
         self.notify_observers()
 
     def add_observer(self, observer):
-        """Registers an observer for robot updates."""
+        #Registers an observer for robot updates.
         self.observers.append(observer)
 
     def notify_observers(self):
-        """Notifies all observers when the robot's state changes."""
+        #Notifies all observers when the robot's state changes.
         for observer in self.observers:
             observer.update_robot()
 
     def reset_position(self):
-        """Resets the robot to its initial position and orientation."""
+        #Resets the robot to its initial position and orientation.
         self.x, self.y = self.initial_position
         next_position = self.path_drawer.get_path()[1]
         dx = next_position[0] - self.initial_position[0]
@@ -77,22 +77,22 @@ class Robot:
 
     # === Control methods ===
     def set_acceleration(self, acceleration):
-        """Sets the robot's acceleration."""
+        #Sets the robot's acceleration.
         self.acceleration = acceleration
         print(f"Acceleration set to {self.acceleration}")
 
     def set_motor_speeds(self, left, right):
-        """Sets the speed of the robot's left and right motors."""
+        #Sets the speed of the robot's left and right motors.
         self.left_speed = left
         self.right_speed = right
 
     def set_speed(self, speed):
-        """Sets the target speed for the robot."""
+        #Sets the target speed for the robot.
         self.target_speed = speed / 100.0
         print(f"Target speed set to {self.target_speed}")
 
     def update_speed(self, target_speed):
-        """Gradually changes the robot's current speed towards the target speed."""
+        #Gradually changes the robot's current speed towards the target speed.
         if self.current_speed < target_speed:
             self.current_speed = min(self.current_speed + self.acceleration, target_speed)
         elif self.current_speed > target_speed:
@@ -101,7 +101,7 @@ class Robot:
 
     # === Update methods ===
     def update_position(self, x, y, angle):
-        """Updates the robot's position and orientation."""
+        #Updates the robot's position and orientation.
         self.x = x
         self.y = y
         self.angle = angle + math.pi / 2
@@ -118,11 +118,11 @@ class Robot:
             sensor_coords = np.array(self.sensor.sensor_line.coords)
             self.sensor_line.set_data(sensor_coords[:, 0], sensor_coords[:, 1])
             self.check_bounds()
-            self.fig.canvas.draw_idle()  # Use draw_idle instead of draw
+            self.fig.canvas.draw_idle() 
             self.fig.canvas.flush_events()
 
     def check_bounds(self):
-        """Ensures the robot stays within the bounds of the plot."""
+        #Ensures the robot stays within the bounds of the plot.
         x_min, x_max = self.ax.get_xlim()
         y_min, y_max = self.ax.get_ylim()
         padding = 0.1
@@ -139,7 +139,7 @@ class Robot:
 
     # === Drawing and Animation ===
     def draw_shape(self, canvas):
-        """Initializes the robot's drawing and starts the animation."""
+        #Initializes the robot's drawing and starts the animation.
         x, y = zip(*self.path_drawer.get_path())
         self.fig, self.ax = plt.subplots(figsize=(8, 8))
         self.ax.plot(x, y, 'k-', linewidth=2)
@@ -183,7 +183,7 @@ class Robot:
         self.start_animation()
 
     def set_limits(self, x, y):
-        """Sets plot limits with padding."""
+        #Sets plot limits with padding.
         x_min, x_max = min(x), max(x)
         y_min, y_max = min(y), max(y)
         padding = 0.2
@@ -241,7 +241,7 @@ class Robot:
     
     
     def on_close(self):
-        """Handles the closure of the robot animation."""
+        #Handles the closure of the robot animation.
         self.animation_running = False
         if self.ani is not None:
             self.ani.event_source.stop()
